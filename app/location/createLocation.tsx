@@ -27,6 +27,8 @@ export default class Map extends Component {
     searchQuery: "",
     markerPosition: null as { latitude: number; longitude: number } | null,
     currentLocation: null as { latitude: number; longitude: number } | null,
+    currentAddress: "", // Corregido: currentAddress en lugar de CurrentAddress
+    saveAs: "",
   };
 
   private map: MapView | null = null;
@@ -62,12 +64,47 @@ export default class Map extends Component {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
+
+      this.getAddressFromCoordinates(latitude, longitude);
     } catch (error) {
       console.error("Error al obtener la ubicación:", error);
       Alert.alert(
         "Error",
         "No se pudo obtener la ubicación. Intenta nuevamente más tarde."
       );
+    }
+  };
+
+  getAddressFromCoordinates = async (latitude: number, longitude: number) => {
+    try {
+      const response = await Geocoder.from(latitude, longitude);
+      const addressComponents = response.results[0].address_components;
+      let address = "";
+
+      for (let i = 0; i < addressComponents.length; i++) {
+        if (addressComponents[i].types.includes("street_number")) {
+          address += addressComponents[i].long_name + " ";
+        }
+        if (addressComponents[i].types.includes("route")) {
+          address += addressComponents[i].long_name + ", ";
+        }
+        if (addressComponents[i].types.includes("locality")) {
+          address += addressComponents[i].long_name + ", ";
+        }
+        if (addressComponents[i].types.includes("administrative_area_level_1")) {
+          address += addressComponents[i].short_name + ", ";
+        }
+        if (addressComponents[i].types.includes("country")) {
+          address += addressComponents[i].long_name + ", ";
+        }
+        if (addressComponents[i].types.includes("postal_code")) {
+          address += addressComponents[i].long_name;
+        }
+      }
+
+      this.setState({ currentAddress: address });
+    } catch (error) {
+      console.error("Error al obtener la dirección:", error);
     }
   };
 
@@ -88,6 +125,7 @@ export default class Map extends Component {
         this.setState({
           location: { latitude: lat, longitude: lng },
           markerPosition: { latitude: lat, longitude: lng },
+          searchQuery: "",
         });
 
         this.map?.animateToRegion({
@@ -96,6 +134,8 @@ export default class Map extends Component {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         });
+
+        this.getAddressFromCoordinates(lat, lng);
       } else {
         Alert.alert("Error", "No se encontró la ubicación especificada.");
       }
@@ -109,10 +149,15 @@ export default class Map extends Component {
   };
 
   onSaveLocation = async () => {
-    const { markerPosition } = this.state;
+    const { markerPosition, saveAs } = this.state;
 
     if (!markerPosition) {
       Alert.alert("Error", "Por favor, selecciona una ubicación primero.");
+      return;
+    }
+
+    if (!saveAs) {
+      Alert.alert("Error", "Por favor, Selecciona una etiqueta para guardar.");
       return;
     }
 
@@ -129,6 +174,7 @@ export default class Map extends Component {
       const locationData = {
         latitude: markerPosition.latitude,
         longitude: markerPosition.longitude,
+        label: saveAs,
         timestamp: new Date(),
         userId: user.uid,
         email: user.email,
@@ -139,7 +185,7 @@ export default class Map extends Component {
 
       Alert.alert(
         "Ubicación guardada",
-        `La ubicación fue guardada exitosamente.\nLatitud: ${markerPosition.latitude}, Longitud: ${markerPosition.longitude}`
+        `La ubicación fue guardada exitosamente. Como (${saveAs}).`
       );
     } catch (error) {
       console.error("Error al guardar la ubicación:", error);
@@ -150,34 +196,22 @@ export default class Map extends Component {
     }
   };
 
+  centerMapOnCurrentLocation = () => {
+    const { currentLocation } = this.state;
+    if (currentLocation) {
+      this.map?.animateToRegion({
+        ...currentLocation,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    }
+  };
+
   render() {
-    const { location, markerPosition, searchQuery } = this.state;
+    const { location, markerPosition, searchQuery, saveAs, currentLocation, currentAddress } =
+      this.state;
     return (
       <View style={styles.container}>
-        {/* Barra de búsqueda */}
-        <View style={styles.searchWrapper}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar ubicación"
-            value={searchQuery}
-            onChangeText={(text) => this.setState({ searchQuery: text })}
-          />
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={this.onSearchLocation}
-          >
-            <MaterialIcons name="search" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.currentLocationButton}
-          onPress={this.getCurrentLocation}
-        >
-          <Text style={styles.buttonText}>Usar ubicación actual</Text>
-        </TouchableOpacity>
-
-        {/* Mapa */}
         <MapView
           ref={(ref) => (this.map = ref)}
           style={styles.map}
@@ -192,28 +226,72 @@ export default class Map extends Component {
             <Marker
               coordinate={markerPosition}
               draggable
-              onDragEnd={(e) =>
-                this.setState({ markerPosition: e.nativeEvent.coordinate })
-              }
+              onDragEnd={(e) => {
+                const { latitude, longitude } = e.nativeEvent.coordinate;
+                this.setState({ markerPosition: { latitude, longitude } });
+                this.getAddressFromCoordinates(latitude, longitude);
+              }}
             />
           )}
         </MapView>
 
-        {/* Sección de guardado */}
+        <TouchableOpacity
+          style={styles.locationButton}
+          onPress={this.centerMapOnCurrentLocation}
+        >
+          <MaterialIcons name="my-location" size={24} color="#fff" />
+        </TouchableOpacity>
+
         <View style={styles.saveWrapper}>
-          <Text style={styles.locationText}>
-            Tu ubicación:{" "}
-            {markerPosition
-              ? `Latitud: ${markerPosition.latitude.toFixed(
-                  5
-                )}, Longitud: ${markerPosition.longitude.toFixed(5)}`
-              : "Selecciona una ubicación"}
-          </Text>
+          <Text style={styles.labelText}>Selecciona tu ubicación</Text>
+
+          <View style={styles.searchWrapper}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={
+                currentAddress
+                  ? `Ubicación actual: ${currentAddress}`
+                  : "Escribe una ubicación"
+              }
+              value={searchQuery}
+              onChangeText={(text) => this.setState({ searchQuery: text })}
+            />
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={this.onSearchLocation}
+            >
+              <MaterialIcons name="search" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.optionsWrapper}>
+            {["Casa", "Oficina", "Otro"].map((label) => (
+              <TouchableOpacity
+                key={label}
+                style={[
+                  styles.optionButton,
+                  saveAs === label && styles.optionButtonSelected,
+                ]}
+                onPress={() => this.setState({ saveAs: label })}
+              >
+                <Text
+                  style={
+                    saveAs === label
+                      ? styles.optionTextSelected
+                      : styles.optionText
+                  }
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <TouchableOpacity
             style={styles.saveButton}
             onPress={this.onSaveLocation}
           >
-            <Text style={styles.saveButtonText}>Guardar ubicación</Text>
+            <Text style={styles.saveButtonText}>Guardar Dirección</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -224,87 +302,101 @@ export default class Map extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
-  searchWrapper: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
+  header: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 1,
+    padding: 10,
+    backgroundColor: "#f7f7f7",
+    alignItems: "center",
   },
   searchInput: {
     flex: 1,
     padding: 10,
-    borderRadius: 4,
-    borderColor: "#ccc",
     borderWidth: 1,
-    marginRight: 5,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    marginRight: 10,
   },
   searchButton: {
-    backgroundColor: "#007BFF",
     padding: 10,
-    borderRadius: 4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  currentLocationButton: {
-    position: "absolute",
-    top: 70,
-    left: 10,
-    right: 10,
-    backgroundColor: "#007BFF",
-    padding: 15,
+    backgroundColor: "#4F46E5",
     borderRadius: 8,
-    alignItems: "center",
-    zIndex: 1,
+  },
+  searchButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   map: {
     flex: 1,
   },
-  saveWrapper: {
+  locationButton: {
     position: "absolute",
-    bottom: 10,
-    left: 10,
+    top: 570,
     right: 10,
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    backgroundColor: "#4F46E5",
+    borderRadius: 50,
+    padding: 10,
     elevation: 5,
   },
-  buttonText: {
-    color: "#fff",
+  saveWrapper: {
+    padding: 15,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  labelText: {
     fontSize: 16,
     fontWeight: "bold",
+    marginBottom: 10,
+  },
+  locationInput: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#f7f7f7",
+    marginBottom: 15,
+  },
+  optionsWrapper: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 15,
+  },
+  optionButton: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+  },
+  optionButtonSelected: {
+    backgroundColor: "#4F46E5",
+    borderColor: "#4F46E5",
+  },
+  optionText: {
+    color: "#000",
+  },
+  optionTextSelected: {
+    color: "#fff",
   },
   saveButton: {
-    backgroundColor: "#28A745",
-    padding: 10,
-    borderRadius: 4,
-    marginTop: 10,
+    padding: 15,
+    backgroundColor: "#4F46E5",
+    borderRadius: 8,
     alignItems: "center",
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
     fontWeight: "bold",
   },
-  locationText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
+  searchWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
   },
 });

@@ -15,7 +15,7 @@ const BottomNavigation = () => {
         <FontAwesome5 name="heart" size={24} color="#E63946" />
         <Text style={styles.navText}>Favoritos</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.navItem, styles.navItemCenter]}>
+      <TouchableOpacity style={[styles.navItem, styles.navItemCenter]} onPress={() => router.push('/location/createLocation')}>
         <FontAwesome5 name="search" size={28} color="#FFF" />
       </TouchableOpacity>
       <TouchableOpacity style={styles.navItem}>
