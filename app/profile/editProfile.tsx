@@ -1,39 +1,129 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import CountryPicker from '../../components/countryPicker';
 import BirthDatePicker from '../../components/birthDatePicker';
 import GenderPicker from '../../components/genderPicker';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { firestore, auth } from '../../config/firebase';
+
+type UserProfile = {
+  nombre: string;
+  apellido: string;
+  rut: string;
+  fechaNacimiento: string;
+  email: string;
+  telefono: string;
+  birthDate?: string;
+  country?: string;
+  gender?: string;
+  direccion: string;
+};
 
 const EditProfileScreen = () => {
   const router = useRouter();
   const [form, setForm] = useState({
-    firstName: 'Penny',
-    lastName: 'Parker',
-    rut: '12.345.678-9',
-    birthDate: new Date(1990, 0, 1),
-    username: 'pennyparker',
-    email: 'p_parker1@gmail.com',
-    phone: '123-456-7890',
-    country: 'Chile',
-    gender: 'Femenino',
-    address: 'P. Sherman, calle Wallaby, 42, Sydney',
+    nombre: '',
+    apellido: '',
+    rut: '',
+    fechaNacimiento: '',
+    email: '',
+    telefono: '',
+    birthDate: '',
+    country: '',
+    gender: '',
+    direccion: '',
   });
 
-  const handleInputChange = (field: string, value: string | Date) => {
+  const handleInputChange = (field: keyof UserProfile, value: string) => {
     setForm({ ...form, [field]: value });
   };
 
-  //backend aqui
-  const handleSave = () => {
-    if (!form.firstName || !form.lastName || !form.email || !form.phone) {
-      alert('Por favor, completa todos los campos obligatorios.');
-      return;
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        Alert.alert('Error', 'No se pudo obtener la información del usuario.');
+        return;
+      }
+
+      try {
+        const userDoc = doc(firestore, 'users', userId);
+        const userSnap = await getDoc(userDoc);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data() as UserProfile;
+
+          setForm({
+            nombre: userData.nombre || '',
+            apellido: userData.apellido || '',
+            rut: userData.rut || '',
+            fechaNacimiento: userData.fechaNacimiento || '',
+            email: userData.email || '',
+            telefono: userData.telefono || '',
+            birthDate: userData.birthDate || '',
+            country: userData.country || '',
+            gender: userData.gender || '',
+            direccion: userData.direccion || '',
+          });
+        } else {
+          Alert.alert('Error', 'No se encontraron datos para este usuario.');
+        }
+      } catch (error) {
+        console.error('Error al obtener los datos del usuario:', error);
+        Alert.alert('Error', 'Hubo un problema al cargar los datos del usuario.');
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+
+
+  const validateForm = () => {
+    if (!form.nombre || !form.apellido || !form.email || !form.telefono) {
+      Alert.alert('Error', 'Por favor, completa todos los campos obligatorios.');
+      return false;
     }
-    console.log('Datos guardados:', form);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      Alert.alert('Error', 'Por favor, ingresa un correo válido.');
+      return false;
+    }
+
+    const phoneRegex = /^[0-9]{9,15}$/;
+    if (!phoneRegex.test(form.telefono)) {
+      Alert.alert('Error', 'Por favor, ingresa un número de teléfono válido.');
+      return false;
+    }
+
+    return true;
   };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        Alert.alert('Error', 'No se pudo obtener el usuario actual.');
+        return;
+      }
+
+      const userDoc = doc(firestore, 'users', userId);
+      await updateDoc(userDoc, form);
+
+      Alert.alert('Éxito', 'Perfil actualizado correctamente.');
+      router.push('/profile');
+    } catch (error) {
+      console.error('Error al guardar los datos:', error);
+      Alert.alert('Error', 'No se pudieron guardar los datos.');
+    }
+  };
+
 
 
   return (
@@ -50,16 +140,16 @@ const EditProfileScreen = () => {
             <Text style={styles.label}>Nombre</Text>
             <TextInput
               style={styles.input}
-              value={form.firstName}
-              onChangeText={(text) => handleInputChange('firstName', text)}
+              value={form.nombre}
+              onChangeText={(text) => handleInputChange('nombre', text)}
             />
           </View>
           <View style={[styles.inputContainer, styles.halfWidth]}>
             <Text style={styles.label}>Apellido</Text>
             <TextInput
               style={styles.input}
-              value={form.lastName}
-              onChangeText={(text) => handleInputChange('lastName', text)}
+              value={form.apellido}
+              onChangeText={(text) => handleInputChange('apellido', text)}
             />
           </View>
         </View>
@@ -74,26 +164,25 @@ const EditProfileScreen = () => {
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Fecha de Nacimiento</Text>
           <BirthDatePicker
-            selectedDate={form.birthDate}
-            onSelect={(date) => handleInputChange('birthDate', date)}
+            selectedDate={new Date(form.birthDate)}
+            onSelect={(date) => handleInputChange('birthDate', date.toISOString())}
           />
         </View>
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.disabledInput]}
             value={form.email}
-            keyboardType="email-address"
-            onChangeText={(text) => handleInputChange('email', text)}
+            editable={false}
           />
         </View>
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Teléfono</Text>
           <TextInput
             style={styles.input}
-            value={form.phone}
+            value={form.telefono}
             keyboardType="phone-pad"
-            onChangeText={(text) => handleInputChange('phone', text)}
+            onChangeText={(text) => handleInputChange('telefono', text)}
           />
         </View>
         <View style={styles.row}>
@@ -116,8 +205,8 @@ const EditProfileScreen = () => {
           <Text style={styles.label}>Dirección</Text>
           <TextInput
             style={styles.input}
-            value={form.address}
-            onChangeText={(text) => handleInputChange('address', text)}
+            value={form.direccion}
+            onChangeText={(text) => handleInputChange('direccion', text)}
           />
         </View>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
