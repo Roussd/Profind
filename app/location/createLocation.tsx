@@ -5,6 +5,7 @@ import { auth, firestore } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";
 import Geocoder from "react-native-geocoding";
 import { collection, addDoc } from "firebase/firestore";
+import BackButton from '../../components/backButton';
 
 import {
   TextInput,
@@ -27,7 +28,7 @@ export default class Map extends Component {
     searchQuery: "",
     markerPosition: null as { latitude: number; longitude: number } | null,
     currentLocation: null as { latitude: number; longitude: number } | null,
-    currentAddress: "", // Corregido: currentAddress en lugar de CurrentAddress
+    currentAddress: "", 
     saveAs: "",
   };
 
@@ -212,6 +213,7 @@ export default class Map extends Component {
       this.state;
     return (
       <View style={styles.container}>
+        <BackButton />
         <MapView
           ref={(ref) => (this.map = ref)}
           style={styles.map}
