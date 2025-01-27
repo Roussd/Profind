@@ -1,11 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { auth } from '../config/firebase'; // Asegúrate de importar tu configuración de Firebase
+import { signOut } from 'firebase/auth';
 
 const ProfileScreen = () => {
   const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.replace('/home'); // Redirige a la pantalla de inicio o login
+    } catch (error) {
+      Alert.alert('Error', 'Hubo un problema al cerrar sesión. Inténtalo de nuevo.');
+    }
+  };
 
   const MenuItem = ({
     icon,
@@ -75,6 +86,12 @@ const ProfileScreen = () => {
           <MenuItem icon="help-circle-outline" text="Soporte" />
           <MenuItem icon="call-outline" text="Contacto" />
           <MenuItem icon="lock-closed-outline" text="Políticas de Privacidad" isLast />
+        </View>
+        <View style={styles.logoutSection}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={22} color="#FFF" style={styles.menuIcon} />
+            <Text style={styles.logoutText}>Cerrar Sesión</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -208,6 +225,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+  },
+  logoutSection: {
+    marginHorizontal: 20,
+    marginTop: 16,
+  },
+  logoutButton: {
+    backgroundColor: '#4F46E5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    paddingVertical: 12,
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   
 });
