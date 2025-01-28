@@ -4,9 +4,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { doc, updateDoc } from 'firebase/firestore'; // Importa updateDoc
 import { auth, firestore } from '../../config/firebase'; // Asegúrate de tener bien configurado tu Firestore y Auth
+import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
 
 const ServicePricingScreen = () => {
   const router = useRouter();
+  const { nombre, apellido, rut, fechaNacimiento, telefono, profileType, imageUrl, service, setRegisterData } = useRegisterContext(); // Usar el hook directamente
   const [price, setPrice] = useState('');
 
   const handleContinue = async () => {
@@ -22,17 +24,25 @@ const ServicePricingScreen = () => {
         return;
       }
 
-      // Actualiza el campo 'servicePrice' en el documento del usuario
+      // Actualizar la información en Firestore
       const userDocRef = doc(firestore, 'users', userId);
       await updateDoc(userDocRef, {
+        nombre,
+        apellido,
+        rut,
+        fechaNacimiento,
+        telefono,
+        profileType,
+        imageUrl,
+        service,
         servicePrice: price,
       });
 
-      Alert.alert('Éxito', 'Precio registrado correctamente');
+      Alert.alert('Éxito', 'Información registrada correctamente');
       router.push('/register/finishregister');
     } catch (error) {
-      console.error('Error al registrar el precio:', error);
-      Alert.alert('Error', 'Hubo un problema al registrar el precio. Inténtalo de nuevo.');
+      console.error('Error al registrar la información:', error);
+      Alert.alert('Error', 'Hubo un problema al registrar la información. Inténtalo de nuevo.');
     }
   };
 

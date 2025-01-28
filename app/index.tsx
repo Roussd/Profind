@@ -1,17 +1,30 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { auth } from '../config/firebase';
+import { auth, firestore } from '../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const SplashScreen = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const checkUser = onAuthStateChanged(auth, (user) => {
+    const checkUser = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Si el usuario está autenticado, redirige a la pantalla principal
-        router.replace('/homePage'); // Cambia esto a la ruta de tu perfil/mapa
+        // Si el usuario está autenticado, verifica el estado de profileCompleted
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.profileCompleted) {
+            router.replace('/homePage'); // Redirige a la pantalla principal
+          } else {
+            router.replace('/home'); // Redirige a la pantalla de registro
+          }
+        } else {
+          Alert.alert('Error', 'No se pudo encontrar la información del usuario.');
+        }
       } else {
         // Si no está autenticado, redirige a la pantalla de inicio
         router.replace('/home'); // Cambia esto si tu pantalla de inicio tiene otra ruta

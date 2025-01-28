@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { auth } from '../config/firebase';
+import { auth, firestore } from '../config/firebase';
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
 } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -28,11 +29,32 @@ const LoginScreen = () => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        router.replace('/homePage');
+        checkProfileCompletion(currentUser.uid);
       }
     });
     return unsubscribe;
   }, []);
+
+  const checkProfileCompletion = async (userId) => {
+    try {
+      const userDocRef = doc(firestore, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.profileCompleted) {
+          router.replace('/homePage');
+        } else {
+          router.replace('/register/register');
+        }
+      } else {
+        Alert.alert('Error', 'No se pudo encontrar la información del usuario.');
+      }
+    } catch (error) {
+      console.error('Error al verificar el estado del perfil:', error);
+      Alert.alert('Error', 'Hubo un problema al verificar el estado del perfil. Inténtalo de nuevo.');
+    }
+  };
 
   const handleLoginWithGoogle = () => {
     console.log('Iniciar sesión con Google');
@@ -50,7 +72,7 @@ const LoginScreen = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       Alert.alert('Inicio de sesión exitoso', `Bienvenido, ${userCredential.user.email}`);
       setUser(userCredential.user);
-      router.replace('/homePage');
+      checkProfileCompletion(userCredential.user.uid);
     } catch (error) {
       Alert.alert('Error', error.message || 'Ocurrió un error al iniciar sesión.');
     } finally {

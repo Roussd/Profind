@@ -9,49 +9,41 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, setDoc } from 'firebase/firestore'; 
-import { auth, firestore } from '../../config/firebase'; 
+import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
+import { checkRut, prettifyRut } from 'react-rut-formatter'; // Importa las funciones de react-rut-formatter
 
 const RegisterScreen = () => {
   const router = useRouter();
+  const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [rut, setRut] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [telefono, setTelefono] = useState('');
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!nombre || !apellido || !rut || !fechaNacimiento || !telefono) {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
       return;
     }
-  
-    try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        Alert.alert('Error', 'No se pudo obtener el usuario actual. Inténtalo de nuevo.');
-        return;
-      }
-  
-      // Guardar la información del usuario
-      const userDocRef = doc(firestore, 'users', userId);
-      await setDoc(userDocRef, {
-        nombre,
-        apellido,
-        rut,
-        fechaNacimiento,
-        telefono,
-        registrationStep: 2,
-      });
-  
-      // Pasar a la pantalla de selección de servicios
-      router.push('/register/profiletype'); 
-    } catch (error) {
-      console.error('Error al guardar los datos:', error);
-      Alert.alert('Error', 'No se pudieron guardar los datos. Inténtalo más tarde.');
+
+    if (!checkRut(rut)) {
+      Alert.alert('Error', 'RUT inválido. Por favor, ingresa un RUT válido.');
+      return;
     }
+
+    // Almacenar datos en el contexto
+    setRegisterData({
+      nombre,
+      apellido,
+      rut: prettifyRut(rut),
+      fechaNacimiento,
+      telefono,
+    });
+
+    // Pasar a la pantalla de selección de servicios
+    router.push('/register/profiletype');
   };
-  
 
   return (
     <View style={styles.container}>
@@ -91,6 +83,7 @@ const RegisterScreen = () => {
         placeholder="12.345.678-9"
         value={rut}
         onChangeText={setRut}
+        onBlur={() => setRut(prettifyRut(rut))}
         keyboardType="default"
       />
 
