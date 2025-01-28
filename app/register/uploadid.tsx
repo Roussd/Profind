@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -11,12 +10,14 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, firestore, storage } from '../../config/firebase';
+import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
 
 const UploadID = () => {
   const router = useRouter();
+  const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -98,9 +99,17 @@ const UploadID = () => {
       if (!imageUrl) return;
   
       const userDocRef = doc(firestore, 'users', userId);
-      await updateDoc(userDocRef, {
+      const docSnapshot = await getDoc(userDocRef);
+  
+      if (!docSnapshot.exists()) {
+        await setDoc(userDocRef, { imageUrl });
+      } else {
+        await updateDoc(userDocRef, { imageUrl });
+      }
+  
+      // Almacenar datos en el contexto
+      setRegisterData({
         imageUrl,
-        registrationStep: 3,
       });
   
       router.push('/register/serviceselection');
@@ -109,7 +118,6 @@ const UploadID = () => {
       Alert.alert('Error', 'No se pudieron guardar los datos. Inténtalo más tarde.');
     }
   };
-  
 
   return (
     <View style={styles.container}>
@@ -179,22 +187,6 @@ const styles = StyleSheet.create({
     color: 'gray',
     textAlign: 'center',
     marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#1E293B',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 24,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    marginBottom: 15,
-    fontSize: 14,
-    color: '#1E293B',
   },
   uploadContainer: {
     borderWidth: 2,

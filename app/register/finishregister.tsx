@@ -1,10 +1,33 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { doc, updateDoc } from 'firebase/firestore'; // Importa updateDoc
+import { auth, firestore } from '../../config/firebase'; // Asegúrate de tener bien configurado tu Firestore y Auth
 
 const RegistrationCompleteScreen = () => {
   const router = useRouter();
+
+  const handleGoToHome = async () => {
+    try {
+      const userId = auth.currentUser?.uid; // Obtén el ID del usuario autenticado
+      if (!userId) {
+        Alert.alert('Error', 'No se pudo identificar al usuario.');
+        return;
+      }
+
+      // Actualizar el campo 'profileCompleted' en el documento del usuario
+      const userDocRef = doc(firestore, 'users', userId);
+      await updateDoc(userDocRef, {
+        profileCompleted: true,
+      });
+
+      router.push('/homePage'); // Cambia esta ruta según la pantalla de inicio de tu app
+    } catch (error) {
+      console.error('Error al actualizar el estado del perfil:', error);
+      Alert.alert('Error', 'Hubo un problema al actualizar el estado del perfil. Inténtalo de nuevo.');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -23,7 +46,7 @@ const RegistrationCompleteScreen = () => {
       {/* Botón para volver al inicio */}
       <TouchableOpacity
         style={styles.continueButton}
-        onPress={() => router.push('/homePage')} // Cambia esta ruta según la pantalla de inicio de tu app
+        onPress={handleGoToHome}
       >
         <Text style={styles.continueButtonText}>Ir al Inicio</Text>
       </TouchableOpacity>

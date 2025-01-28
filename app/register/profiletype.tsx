@@ -11,11 +11,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { doc, updateDoc } from "firebase/firestore";
-import { auth, firestore } from "../../config/firebase"; // Asegúrate de importar correctamente Firebase
+import { useRegisterContext } from "../../context/userRegisterContext"; // Importa el hook
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, firestore } from '../../config/firebase';
 
 const ProfileTypeScreen = () => {
   const router = useRouter();
+  const { nombre, apellido, rut, fechaNacimiento, telefono, setRegisterData } = useRegisterContext(); // Usar el hook directamente
   const [selectedOption, setSelectedOption] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
@@ -23,7 +25,6 @@ const ProfileTypeScreen = () => {
     { label: "Seleccione una opción", value: "0" },
     { label: "Desea ofrecer servicios", value: "1" },
     { label: "Desea contratar servicios", value: "2" },
-    { label: "Ambas", value: "3" },
   ];
 
   const handleContinue = async () => {
@@ -32,28 +33,36 @@ const ProfileTypeScreen = () => {
       return;
     }
 
-    const userId = auth.currentUser?.uid; // ID del usuario autenticado
-    if (!userId) {
-      Alert.alert("Error", "No se pudo identificar al usuario.");
-      return;
-    }
+    // Almacenar datos en el contexto
+    setRegisterData({
+      profileType: selectedOption,
+    });
 
-    try {
-      // Guarda el tipo de perfil en Firestore
-      const userDocRef = doc(firestore, "users", userId);
-      await updateDoc(userDocRef, {
-        profileType: selectedOption,
-      });
+    if (selectedOption === "1") {
+      router.push('/register/uploadid');
+    } else if (selectedOption === "2") {
+      try {
+        const userId = auth.currentUser?.uid;
+        if (!userId) {
+          Alert.alert('Error', 'No se pudo obtener el usuario actual. Inténtalo de nuevo.');
+          return;
+        }
 
-      // Navega según la selección del usuario
-      if (selectedOption === "1" || selectedOption === "3") {
-        router.push("/register/uploadid"); // Pantalla para ofrecer servicios (subir carnet, rubro, precio, etc.)
-      } else if (selectedOption === "2") {
-        router.push("/map/home"); // Pantalla para contratar servicios
+        const userDocRef = doc(firestore, 'users', userId);
+        await updateDoc(userDocRef, {
+          nombre,
+          apellido,
+          rut,
+          fechaNacimiento,
+          telefono,
+          profileType: selectedOption,
+        });
+
+        router.push('/register/finishregister');
+      } catch (error) {
+        console.error('Error al guardar los datos:', error);
+        Alert.alert('Error', 'No se pudieron guardar los datos. Inténtalo más tarde.');
       }
-    } catch (error) {
-      console.error("Error al guardar el tipo de perfil:", error);
-      Alert.alert("Error", "Hubo un problema al guardar tu selección. Inténtalo de nuevo.");
     }
   };
 
@@ -131,7 +140,6 @@ const ProfileTypeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
