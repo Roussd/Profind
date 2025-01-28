@@ -1,18 +1,54 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { auth } from '../config/firebase'; // Asegúrate de importar tu configuración de Firebase
+import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '../config/firebase';
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const [userData, setUserData] = useState({
+    nombre: '',
+    email: '',
+  });
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        Alert.alert('Error', 'No se pudo obtener la información del usuario.');
+        return;
+      }
+
+      try {
+        const userDoc = doc(firestore, 'users', userId);
+        const userSnap = await getDoc(userDoc);
+
+        if (userSnap.exists()) {
+          setUserData({
+            nombre: userSnap.data().nombre || 'Usuario',
+            email: userSnap.data().email || 'No especificado',
+          });
+        } else {
+          Alert.alert('Error', 'No se encontraron datos para este usuario.');
+        }
+      } catch (error) {
+        console.error('Error al obtener los datos del usuario:', error);
+        Alert.alert('Error', 'Hubo un problema al cargar los datos del usuario.');
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.replace('/home'); // Redirige a la pantalla de inicio o login
+      router.replace('/home');
     } catch (error) {
       Alert.alert('Error', 'Hubo un problema al cerrar sesión. Inténtalo de nuevo.');
     }
@@ -45,9 +81,19 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#4F46E5" />
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            router.push('/homePage');
+          }}
+        >
+          <View style={styles.backButtonContainer}>
+            <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
+          </View>
         </TouchableOpacity>
+
+
         <View style={styles.headerTop}>
         </View>
       </View>
@@ -62,8 +108,8 @@ const ProfileScreen = () => {
               <Ionicons name="pencil" size={16} color="#4F46E5" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>Penny Parker</Text>
-          <Text style={styles.email}>p_parker1@gmail.com</Text>
+          <Text style={styles.name}>{userData.nombre}</Text>
+          <Text style={styles.email}>{userData.email}</Text>
         </View>
 
         <View style={styles.menuSection}>
@@ -77,9 +123,17 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.menuSection}>
-          <MenuItem icon="shield-checkmark-outline" text="Seguridad" />
+          <MenuItem
+            icon="shield-checkmark-outline"
+            text="Seguridad"
+            onPress={() => router.push('../profile/security')}
+          />
           <MenuItem icon="color-palette-outline" text="Tema" rightText="Modo Claro" />
-          <MenuItem icon="card-outline" text="Gestionar Métodos de Pago" isLast />
+          <MenuItem
+            icon="card-outline"
+            text="Gestionar Métodos de Pago" isLast
+            onPress={() => router.push('../payment/paymentMethod')}
+          />
         </View>
 
         <View style={styles.menuSection}>
@@ -211,10 +265,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     left: 20,
+    zIndex: 10,
+  },
+
+  backButtonContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 50,
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0E7FF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -226,6 +284,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+
   logoutSection: {
     marginHorizontal: 20,
     marginTop: 16,
@@ -244,7 +303,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  
+
 });
 
 export default ProfileScreen;

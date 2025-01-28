@@ -10,8 +10,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../config/firebase';
-
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, firestore } from '../../config/firebase';
 
 const RegisterHomeScreen = () => {
   const router = useRouter();
@@ -19,36 +19,44 @@ const RegisterHomeScreen = () => {
   const [password, setPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-    // Función para manejar el registro
-    const handleRegister = async () => {
-      if (!email || !password) {
-        Alert.alert('Error', 'Por favor, completa todos los campos.');
-        return;
+  // Función para manejar el registro
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Por favor, completa todos los campos.');
+      return;
+    }
+
+    if (!agreeToTerms) {
+      Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
+      return;
+    }
+
+    try {
+      // Crear usuario en Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userId = userCredential.user.uid;
+
+      // Guardar la variable profileCompleted en Firestore
+      const userDocRef = doc(firestore, 'users', userId);
+      await setDoc(userDocRef, {
+        profileCompleted: false,
+      });
+
+      Alert.alert('Éxito', 'Usuario registrado exitosamente.');
+      router.push('/register/register');
+    } catch (error: any) {
+      // Manejo de errores
+      let errorMessage = 'Algo salió mal. Inténtalo de nuevo.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este correo ya está registrado.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'La contraseña debe tener al menos 6 caracteres.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'El correo electrónico no es válido.';
       }
-  
-      if (!agreeToTerms) {
-        Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
-        return;
-      }
-  
-      try {
-        // Crear usuario en Firebase Authentication
-        await createUserWithEmailAndPassword(auth, email, password);
-        Alert.alert('Éxito', 'Usuario registrado exitosamente.');
-        router.push('/register/register');
-      } catch (error: any) {
-        // Manejo de errores
-        let errorMessage = 'Algo salió mal. Inténtalo de nuevo.';
-        if (error.code === 'auth/email-already-in-use') {
-          errorMessage = 'Este correo ya está registrado.';
-        } else if (error.code === 'auth/weak-password') {
-          errorMessage = 'La contraseña debe tener al menos 6 caracteres.';
-        } else if (error.code === 'auth/invalid-email') {
-          errorMessage = 'El correo electrónico no es válido.';
-        }
-        Alert.alert('Error', errorMessage);
-      }
-    };
+      Alert.alert('Error', errorMessage);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -117,12 +125,11 @@ const RegisterHomeScreen = () => {
 
       {/* Botón de registro */}
       <TouchableOpacity
-  style={styles.registerButton}
-  onPress={handleRegister}
->
-  <Text style={styles.registerButtonText}>Registrarse</Text>
-</TouchableOpacity>
-
+        style={styles.registerButton}
+        onPress={handleRegister}
+      >
+        <Text style={styles.registerButtonText}>Registrarse</Text>
+      </TouchableOpacity>
 
       {/* Separador */}
       <View style={styles.separatorContainer}>

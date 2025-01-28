@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, updateDoc } from 'firebase/firestore'; 
-import { auth, firestore } from '../../config/firebase'; 
+import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
 
 const ServiceSelectionScreen = () => {
   const router = useRouter();
+  const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
   const [selectedService, setSelectedService] = useState('');
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
@@ -25,31 +25,18 @@ const ServiceSelectionScreen = () => {
     { label: 'Carpintero', value: 'carpintero' },
   ];
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!selectedService) {
       Alert.alert('Error', 'Por favor, selecciona un servicio.');
       return;
     }
 
-    try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        Alert.alert('Error', 'No se pudo obtener el usuario actual. Inténtalo de nuevo.');
-        return;
-      }
+    // Almacenar datos en el contexto
+    setRegisterData({
+      service: selectedService,
+    });
 
-      // Actualizar el documento con el servicio seleccionado
-      const userDocRef = doc(firestore, 'users', userId);
-      await updateDoc(userDocRef, {
-        service: selectedService, // Añadir el servicio seleccionado
-        registrationStep: 3, // Actualizar el paso de registro
-      });
-
-      router.push('/register/serviceprice'); // Avanzar a la siguiente pantalla
-    } catch (error) {
-      console.error('Error al guardar el servicio:', error);
-      Alert.alert('Error', 'No se pudo guardar el servicio. Inténtalo más tarde.');
-    }
+    router.push('/register/serviceprice'); // Avanzar a la siguiente pantalla
   };
 
   const renderService = ({ item }) => (

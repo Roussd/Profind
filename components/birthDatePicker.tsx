@@ -49,10 +49,11 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({ selectedDate, onSelec
               <DateTimePicker
                 value={selectedDate}
                 mode="date"
-                display="spinner" 
-                textColor={Platform.OS === 'ios' ? '#333' : undefined} 
+                display="spinner"
+                textColor={Platform.OS === 'ios' ? '#333' : undefined}
                 onChange={handleDateChange}
-                maximumDate={new Date()}
+                maximumDate={new Date()} 
+                minimumDate={new Date(new Date().getFullYear() - 120, 0, 1)} 
               />
               <TouchableOpacity
                 style={styles.confirmButton}
