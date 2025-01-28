@@ -109,6 +109,7 @@ export default function SavedLocations() {
     }
 
     alert(`Ubicación seleccionada: ${selectedLocation.label}`);
+    router.push("location/searchEmployee");
   };
 
   const renderItem = ({ item }: { item: Location }) => (
