@@ -11,6 +11,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
 import { checkRut, prettifyRut } from 'react-rut-formatter'; // Importa las funciones de react-rut-formatter
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; // Importar funciones de Firebase
+import BirthDatePicker from '../../components/birthDatePicker'; // Importar el componente BirthDatePicker
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -18,17 +20,57 @@ const RegisterScreen = () => {
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [rut, setRut] = useState('');
-  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState(new Date());
   const [telefono, setTelefono] = useState('');
 
-  const handleContinue = () => {
+  const checkRutInDatabase = async (rut) => {
+    const db = getFirestore();
+    const q = query(collection(db, 'users'), where('rut', '==', rut));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  };
+
+  const isAdult = (birthDate) => {
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      return age - 1 >= 18;
+    }
+    return age >= 18;
+  };
+
+  const handleContinue = async () => {
     if (!nombre || !apellido || !rut || !fechaNacimiento || !telefono) {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
       return;
     }
 
+    const nameRegex = /^[a-zA-Z]+$/;
+    if (!nameRegex.test(nombre) || !nameRegex.test(apellido)) {
+      Alert.alert('Error', 'El nombre y apellido solo deben contener letras.');
+      return;
+    }
+
+    const phoneRegex = /^[0-9]+$/;
+    if (!phoneRegex.test(telefono)) {
+      Alert.alert('Error', 'El número de teléfono solo debe contener números.');
+      return;
+    }
+
     if (!checkRut(rut)) {
       Alert.alert('Error', 'RUT inválido. Por favor, ingresa un RUT válido.');
+      return;
+    }
+
+    if (!isAdult(fechaNacimiento)) {
+      Alert.alert('Error', 'Debes ser mayor de 18 años para registrarte.');
+      return;
+    }
+
+    const isRutRegistered = await checkRutInDatabase(rut);
+    if (isRutRegistered) {
+      Alert.alert('Error', 'El RUT ya está registrado.');
       return;
     }
 
@@ -89,12 +131,9 @@ const RegisterScreen = () => {
 
       {/* Campo Fecha de nacimiento */}
       <Text style={styles.inputLabel}>Fecha de nacimiento</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="12/12/2000"
-        value={fechaNacimiento}
-        onChangeText={setFechaNacimiento}
-        keyboardType="number-pad"
+      <BirthDatePicker
+        selectedDate={fechaNacimiento}
+        onSelect={setFechaNacimiento}
       />
 
       {/* Campo Teléfono */}

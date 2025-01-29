@@ -7,7 +7,7 @@ interface RegisterContextType {
   nombre: string;
   apellido: string;
   rut: string;
-  fechaNacimiento: string;
+  fechaNacimiento: Date; // Cambiar a Date
   telefono: string;
   profileType: string; // Nuevo campo agregado
   imageUrl: string; // Nuevo campo agregado
@@ -25,7 +25,7 @@ export const RegisterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     nombre: "",
     apellido: "",
     rut: "",
-    fechaNacimiento: "",
+    fechaNacimiento: new Date(), // Inicializa como Date
     telefono: "",
     profileType: "", // Inicializa el nuevo campo
     imageUrl: "", // Inicializa el nuevo campo
