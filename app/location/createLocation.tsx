@@ -155,7 +155,8 @@ export class Map extends Component<Props> {
   };
 
   onSaveLocation = async () => {
-    const { markerPosition, saveAs } = this.state;
+
+    const { markerPosition, saveAs, currentAddress } = this.state;
 
     if (!markerPosition) {
       Alert.alert("Error", "Por favor, selecciona una ubicación primero.");
@@ -175,12 +176,13 @@ export class Map extends Component<Props> {
         Alert.alert("Error", "No hay un usuario autenticado.");
         return;
       }
-
+      
       // Datos a guardar
       const locationData = {
         latitude: markerPosition.latitude,
         longitude: markerPosition.longitude,
         label: saveAs,
+        address: currentAddress,
         timestamp: new Date(),
         userId: user.uid,
         email: user.email,
@@ -317,9 +319,9 @@ export class Map extends Component<Props> {
 }
 
 
-export default function MapScreen() {  // <-- Exporta como default
+export default function MapScreen() {  
   const router = useRouter();
-  return <Map router={router} />;  // Usa tu clase Map original
+  return <Map router={router} />;  
 }
 
 const styles = StyleSheet.create({

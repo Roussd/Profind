@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { collection, getDocs, query, where,writeBatch,doc,orderBy  } from "firebase/firestore";
+import { collection, getDocs, query, where,writeBatch, doc, orderBy, onSnapshot   } from "firebase/firestore";
 import { auth, firestore } from "../../config/firebase";
 import Geocoder from "react-native-geocoding"; // Asegúrate de tener configurado Geocoder correctamente
 import BackButton from "../../components/backButton";
@@ -29,7 +29,42 @@ export default function SavedLocations() {
   } | null>(null);
 
   useEffect(() => {
-    fetchSavedLocations();
+    const user = auth.currentUser;
+    if (!user) return;
+  
+    const locationsRef = collection(firestore, "locations");
+    const q = query(
+      locationsRef,
+      where("userId", "==", user.uid),
+      orderBy("selected", "desc")
+    );
+  
+    // Listener en tiempo real
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const locationsData = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          let address = data.address;
+  
+          // Solo busca dirección si no existe y hay coordenadas
+          if (!address && data.latitude && data.longitude) {
+            address = await getAddressFromCoordinates(data.latitude, data.longitude);
+          }
+  
+          return {
+            id: doc.id,
+            label: data.label || "Sin etiqueta",
+            address: address || "Dirección no disponible",
+            selected: data.selected || false,
+          };
+        })
+      );
+  
+      setLocations(locationsData);
+      setFilteredLocations(locationsData);
+    });
+  
+    return unsubscribe; // Limpia el listener al desmontar el componente
   }, []);
 
   const getAddressFromCoordinates = async (
@@ -71,46 +106,6 @@ export default function SavedLocations() {
     }
   };
 
-  const fetchSavedLocations = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const locationsRef = collection(firestore, "locations");
-      const q = query(
-        locationsRef,
-        where("userId", "==", user.uid),
-        orderBy("selected", "desc") // <- Esto hará que las seleccionadas aparezcan primero
-      );
-      const snapshot = await getDocs(q);
-
-      const locationsData = await Promise.all(
-        snapshot.docs.map(async (doc) => {
-          const data = doc.data();
-          let address = data.address;
-
-          if (!address && data.latitude && data.longitude) {
-            address = await getAddressFromCoordinates(
-              data.latitude,
-              data.longitude
-            );
-          }
-
-          return {
-            id: doc.id,
-            label: data.label || "Sin etiqueta",
-            address: address || "Dirección no disponible",
-            selected: data.selected || false,
-          };
-        })
-      );
-
-      setLocations(locationsData);
-      setFilteredLocations(locationsData);
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-    }
-  };
 
   interface Location {
     id: string;
@@ -166,7 +161,6 @@ export default function SavedLocations() {
       await batch.commit();
 
       // 6. Actualizar el estado local y UI
-      await fetchSavedLocations();
       setSelectedLocation(null);
 
       alert(`Ubicación "${selectedLocation.label}" activada.`);
