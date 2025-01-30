@@ -118,32 +118,36 @@ const RegisterScreen = () => {
         onChangeText={setApellido}
       />
 
-      {/* Campo RUT */}
-      <Text style={styles.inputLabel}>RUT</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="12.345.678-9"
-        value={rut}
-        onChangeText={setRut}
-        onBlur={() => setRut(prettifyRut(rut))}
-        keyboardType="default"
-      />
+      {/* Contenedor para RUT y Teléfono */}
+      <View style={styles.row}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>RUT</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="12.345.678-9"
+            value={rut}
+            onChangeText={setRut}
+            onBlur={() => setRut(prettifyRut(rut))}
+            keyboardType="default"
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Teléfono</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="912345678"
+            value={telefono}
+            onChangeText={setTelefono}
+            keyboardType="phone-pad"
+          />
+        </View>
+      </View>
 
       {/* Campo Fecha de nacimiento */}
       <Text style={styles.inputLabel}>Fecha de nacimiento</Text>
       <BirthDatePicker
         selectedDate={fechaNacimiento}
         onSelect={setFechaNacimiento}
-      />
-
-      {/* Campo Teléfono */}
-      <Text style={styles.inputLabel}>Teléfono</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="912345678"
-        value={telefono}
-        onChangeText={setTelefono}
-        keyboardType="phone-pad"
       />
 
       {/* Botón Continuar */}
@@ -164,7 +168,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 1,
     backgroundColor: '#f0f0f0',
@@ -175,6 +179,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginTop: -80,
     marginBottom: 10,
   },
   subtitle: {
@@ -182,6 +187,14 @@ const styles = StyleSheet.create({
     color: 'gray',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  inputContainer: {
+    flex: 1,
+    marginRight: 10,
   },
   inputLabel: {
     fontSize: 16,
