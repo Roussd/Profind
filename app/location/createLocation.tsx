@@ -6,6 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import Geocoder from "react-native-geocoding";
 import { collection, addDoc } from "firebase/firestore";
 import BackButton from '../../components/backButton';
+import { useRouter } from "expo-router";
 
 import {
   TextInput,
@@ -19,7 +20,11 @@ import {
 const apiUrl = process.env.EXPO_FIREBASE_API_KEY;
 Geocoder.init(apiUrl);
 
-export default class Map extends Component {
+interface Props {
+  router: any;  // O importa el tipo de Expo Router si está disponible
+}
+
+export class Map extends Component<Props> {  // <-- Usa las props
   state = {
     location: {
       latitude: 0,
@@ -183,6 +188,7 @@ export default class Map extends Component {
 
       // Guardar en Firestore
       await addDoc(collection(firestore, "locations"), locationData);
+      this.props.router.push('/location/savedLocations');
 
       Alert.alert(
         "Ubicación guardada",
@@ -299,6 +305,12 @@ export default class Map extends Component {
       </View>
     );
   }
+}
+
+
+export default function MapScreen() {  // <-- Exporta como default
+  const router = useRouter();
+  return <Map router={router} />;  // Usa tu clase Map original
 }
 
 const styles = StyleSheet.create({
