@@ -5,8 +5,8 @@ import { auth, firestore } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";
 import Geocoder from "react-native-geocoding";
 import { collection, addDoc } from "firebase/firestore";
-import BackButton from '../../components/backButton';
-import { useRouter,Router } from "expo-router";
+import BackButton from "../../components/backButton";
+import { useRouter, Router } from "expo-router";
 
 import {
   TextInput,
@@ -21,10 +21,10 @@ const apiUrl = process.env.EXPO_FIREBASE_API_KEY;
 Geocoder.init(apiUrl);
 
 interface Props {
-  router: Router;  
+  router: Router;
 }
 
-export class Map extends Component<Props> {  
+export class Map extends Component<Props> {
   state = {
     location: {
       latitude: 0,
@@ -33,7 +33,7 @@ export class Map extends Component<Props> {
     searchQuery: "",
     markerPosition: null as { latitude: number; longitude: number } | null,
     currentLocation: null as { latitude: number; longitude: number } | null,
-    currentAddress: "", 
+    currentAddress: "",
     saveAs: "",
   };
 
@@ -97,7 +97,9 @@ export class Map extends Component<Props> {
         if (addressComponents[i].types.includes("locality")) {
           address += addressComponents[i].long_name + ", ";
         }
-        if (addressComponents[i].types.includes("administrative_area_level_1")) {
+        if (
+          addressComponents[i].types.includes("administrative_area_level_1")
+        ) {
           address += addressComponents[i].short_name + ", ";
         }
         if (addressComponents[i].types.includes("country")) {
@@ -155,7 +157,6 @@ export class Map extends Component<Props> {
   };
 
   onSaveLocation = async () => {
-
     const { markerPosition, saveAs, currentAddress } = this.state;
 
     if (!markerPosition) {
@@ -176,7 +177,7 @@ export class Map extends Component<Props> {
         Alert.alert("Error", "No hay un usuario autenticado.");
         return;
       }
-      
+
       // Datos a guardar
       const locationData = {
         latitude: markerPosition.latitude,
@@ -191,7 +192,7 @@ export class Map extends Component<Props> {
 
       // Guardar en Firestore
       await addDoc(collection(firestore, "locations"), locationData);
-      this.props.router.push('/location/savedLocations');
+      this.props.router.push("/location/savedLocations");
 
       Alert.alert(
         "Ubicación guardada",
@@ -209,25 +210,32 @@ export class Map extends Component<Props> {
   centerMapOnCurrentLocation = () => {
     const { currentLocation } = this.state;
     if (currentLocation) {
-
       this.setState({
-      markerPosition: currentLocation,
+        markerPosition: currentLocation,
       });
 
       this.map?.animateToRegion({
         ...currentLocation,
-        latitudeDelta: 0.00,
+        latitudeDelta: 0.0,
         longitudeDelta: 0.009,
-        
       });
 
-      this.getAddressFromCoordinates(currentLocation.latitude, currentLocation.longitude);
+      this.getAddressFromCoordinates(
+        currentLocation.latitude,
+        currentLocation.longitude
+      );
     }
   };
 
   render() {
-    const { location, markerPosition, searchQuery, saveAs, currentLocation, currentAddress } =
-      this.state;
+    const {
+      location,
+      markerPosition,
+      searchQuery,
+      saveAs,
+      currentLocation,
+      currentAddress,
+    } = this.state;
     return (
       <View style={styles.container}>
         <BackButton />
@@ -267,11 +275,7 @@ export class Map extends Component<Props> {
           <View style={styles.searchWrapper}>
             <TextInput
               style={styles.searchInput}
-              placeholder={
-                currentAddress
-                  ? `Ubicación actual: ${currentAddress}`
-                  : "Escribe una ubicación"
-              }
+              placeholder={currentAddress || "Escribe una ubicación"}
               value={searchQuery}
               onChangeText={(text) => this.setState({ searchQuery: text })}
             />
@@ -318,10 +322,9 @@ export class Map extends Component<Props> {
   }
 }
 
-
-export default function MapScreen() {  
+export default function MapScreen() {
   const router = useRouter();
-  return <Map router={router} />;  
+  return <Map router={router} />;
 }
 
 const styles = StyleSheet.create({
