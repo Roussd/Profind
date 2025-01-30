@@ -6,7 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import Geocoder from "react-native-geocoding";
 import { collection, addDoc } from "firebase/firestore";
 import BackButton from '../../components/backButton';
-import { useRouter } from "expo-router";
+import { useRouter,Router } from "expo-router";
 
 import {
   TextInput,
@@ -21,10 +21,10 @@ const apiUrl = process.env.EXPO_FIREBASE_API_KEY;
 Geocoder.init(apiUrl);
 
 interface Props {
-  router: any;  // O importa el tipo de Expo Router si está disponible
+  router: Router;  
 }
 
-export class Map extends Component<Props> {  // <-- Usa las props
+export class Map extends Component<Props> {  
   state = {
     location: {
       latitude: 0,
@@ -206,11 +206,19 @@ export class Map extends Component<Props> {  // <-- Usa las props
   centerMapOnCurrentLocation = () => {
     const { currentLocation } = this.state;
     if (currentLocation) {
+
+      this.setState({
+      markerPosition: currentLocation,
+      });
+
       this.map?.animateToRegion({
         ...currentLocation,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
+        latitudeDelta: 0.00,
+        longitudeDelta: 0.009,
+        
       });
+
+      this.getAddressFromCoordinates(currentLocation.latitude, currentLocation.longitude);
     }
   };
 
@@ -346,7 +354,7 @@ const styles = StyleSheet.create({
   },
   locationButton: {
     position: "absolute",
-    top: 570,
+    top: 500,
     right: 10,
     backgroundColor: "#4F46E5",
     borderRadius: 50,
