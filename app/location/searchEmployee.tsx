@@ -8,20 +8,22 @@ import {
   StyleSheet,
 } from "react-native";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { firestore } from "../../config/firebase";
+import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
 
 const UsersScreen = () => {
   const [users, setUsers] = useState<
-    { id: string; nombre: string; service: string }[]
+    { id: string; nombre: string; service: string; latitude?: number; longitude?: number }[]
   >([]);
   const [filteredUsers, setFilteredUsers] = useState<
-    { id: string; nombre: string; service: string }[]
+    { id: string; nombre: string; service: string; latitude?: number; longitude?: number }[]
   >([]);
   const [serviceFilter, setServiceFilter] = useState("");
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     fetchUsers();
+    fetchUserLocation();
   }, []);
 
   const fetchUsers = async () => {
@@ -36,6 +38,8 @@ const UsersScreen = () => {
           id: doc.id,
           nombre: data.nombre,
           service: data.service,
+          latitude: data.latitude,
+          longitude: data.longitude,
         };
       });
 
@@ -44,6 +48,42 @@ const UsersScreen = () => {
     } catch (error) {
       console.error("Error fetching users:", error);
     }
+  };
+
+  const fetchUserLocation = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const locationsRef = collection(firestore, "locations");
+      const q = query(locationsRef, where("userId", "==", user.uid));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const locationData = snapshot.docs[0].data();
+        setUserLocation({
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user location:", error);
+    }
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distancia en km
   };
 
   const handleFilter = (text: string) => {
@@ -61,13 +101,21 @@ const UsersScreen = () => {
   const renderItem = ({
     item,
   }: {
-    item: { id: string; nombre: string; service: string };
-  }) => (
-    <View style={styles.userCard}>
-      <Text style={styles.userName}>{item.nombre}</Text>
-      <Text style={styles.userService}>Servicio: {item.service}</Text>
-    </View>
-  );
+    item: { id: string; nombre: string; service: string; latitude?: number; longitude?: number };
+  }) => {
+    let distance = "Distancia no disponible";
+    if (userLocation && item.latitude && item.longitude) {
+      distance = `${calculateDistance(userLocation.latitude, userLocation.longitude, item.latitude, item.longitude).toFixed(2)} km`;
+    }
+
+    return (
+      <View style={styles.userCard}>
+        <Text style={styles.userName}>{item.nombre}</Text>
+        <Text style={styles.userService}>Servicio: {item.service}</Text>
+        <Text style={styles.userDistance}>Distancia: {distance}</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -129,6 +177,10 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   userService: {
+    fontSize: 14,
+    color: "#666",
+  },
+  userDistance: {
     fontSize: 14,
     color: "#666",
   },

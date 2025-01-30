@@ -184,6 +184,7 @@ export class Map extends Component<Props> {
         timestamp: new Date(),
         userId: user.uid,
         email: user.email,
+        selected: false,
       };
 
       // Guardar en Firestore
