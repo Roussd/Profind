@@ -6,47 +6,84 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
 
+interface User {
+  id: string;
+  nombre: string;
+  service: string;
+  selectedLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 const UsersScreen = () => {
-  const [users, setUsers] = useState<
-    { id: string; nombre: string; service: string; latitude?: number; longitude?: number }[]
-  >([]);
-  const [filteredUsers, setFilteredUsers] = useState<
-    { id: string; nombre: string; service: string; latitude?: number; longitude?: number }[]
-  >([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [serviceFilter, setServiceFilter] = useState("");
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUsers();
-    fetchUserLocation();
+    const fetchData = async () => {
+      await fetchUserLocation();
+      await fetchEmployees();
+      setLoading(false);
+    };
+    fetchData();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchEmployees = async () => {
     try {
       const usersRef = collection(firestore, "users");
       const q = query(usersRef, where("profileType", "in", ["1", "3"]));
       const snapshot = await getDocs(q);
 
-      const usersData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          nombre: data.nombre,
-          service: data.service,
-          latitude: data.latitude,
-          longitude: data.longitude,
-        };
-      });
+      const employees = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const userData = doc.data();
+          
+          // Obtener la ubicación seleccionada del empleado
+          const locationsRef = collection(firestore, "locations");
+          const locationQuery = query(
+            locationsRef,
+            where("selected", "==", true), // Filtro principal
+            where("userId", "==", doc.id) // Campo adicional
+          );
 
-      setUsers(usersData);
-      setFilteredUsers(usersData);
+          const locationSnapshot = await getDocs(locationQuery);
+          
+          if (locationSnapshot.empty) {
+        console.log(`Empleado ${doc.id} no tiene ubicación seleccionada`);
+        return null; // Filtra empleados sin ubicación
+          }
+
+          const location = locationSnapshot.docs[0]?.data();
+        
+          return {
+        id: doc.id,
+        nombre: userData.nombre,
+        service: userData.service,
+        selectedLocation: location
+          ? { latitude: location.latitude, longitude: location.longitude }
+          : undefined,
+          };
+        })
+      ).then(results => results.filter(Boolean)); // Elimina nulls
+
+      setUsers(employees);
+      setFilteredUsers(employees);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching employees:", error);
+      setLoading(false);
     }
   };
 
@@ -56,7 +93,12 @@ const UsersScreen = () => {
       if (!user) return;
 
       const locationsRef = collection(firestore, "locations");
-      const q = query(locationsRef, where("userId", "==", user.uid));
+      const q = query(
+        locationsRef,
+        where("userId", "==", user.uid),
+        orderBy("selected", "desc")
+      );
+
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
@@ -71,18 +113,24 @@ const UsersScreen = () => {
     }
   };
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
     const R = 6371; // Radio de la Tierra en km
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
 
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
     return R * c; // Distancia en km
   };
 
@@ -91,31 +139,43 @@ const UsersScreen = () => {
     if (!text.trim()) {
       setFilteredUsers(users);
     } else {
-      const filtered = users.filter((users) =>
-        users.service.toLowerCase().includes(text.toLowerCase())
+      const filtered = users.filter((user) =>
+        user.service.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
   };
 
-  const renderItem = ({
-    item,
-  }: {
-    item: { id: string; nombre: string; service: string; latitude?: number; longitude?: number };
-  }) => {
+  const renderItem = ({ item }: { item: User }) => {
     let distance = "Distancia no disponible";
-    if (userLocation && item.latitude && item.longitude) {
-      distance = `${calculateDistance(userLocation.latitude, userLocation.longitude, item.latitude, item.longitude).toFixed(2)} km`;
+
+    if (userLocation && item.selectedLocation) {
+      const distanceValue = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        item.selectedLocation.latitude,
+        item.selectedLocation.longitude
+      );
+
+      distance = `${distanceValue.toFixed(2)} km`;
     }
 
     return (
       <View style={styles.userCard}>
         <Text style={styles.userName}>{item.nombre}</Text>
         <Text style={styles.userService}>Servicio: {item.service}</Text>
-        <Text style={styles.userDistance}>Distancia: {distance}</Text>
+        <Text style={styles.userDistance}>{distance}</Text>
       </View>
     );
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -188,6 +248,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#999",
     marginTop: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 
