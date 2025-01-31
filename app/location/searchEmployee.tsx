@@ -8,18 +8,28 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  addDoc,
+} from "firebase/firestore";
 import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 
 interface User {
   id: string;
   nombre: string;
+  apellido: string;
   service: string;
   selectedLocation?: {
     latitude: number;
     longitude: number;
   };
+  solicitudEnviada?: boolean;
 }
 
 const UsersScreen = () => {
@@ -43,6 +53,7 @@ const UsersScreen = () => {
 
   const fetchEmployees = async () => {
     try {
+      const user = auth.currentUser;
       const usersRef = collection(firestore, "users");
       const q = query(usersRef, where("profileType", "in", ["1", "3"]));
       const snapshot = await getDocs(q);
@@ -50,34 +61,47 @@ const UsersScreen = () => {
       const employees = await Promise.all(
         snapshot.docs.map(async (doc) => {
           const userData = doc.data();
-          
+
+          // Verificar si ya existe una solicitud
+          const solicitudesRef = collection(firestore, "solicitudes");
+          const solicitudQuery = query(
+            solicitudesRef,
+            where("clienteId", "==", user?.uid),
+            where("profesionalId", "==", doc.id)
+          );
+
+          const solicitudSnapshot = await getDocs(solicitudQuery);
+          const tieneSolicitud = !solicitudSnapshot.empty;
+
           // Obtener la ubicación seleccionada del empleado
           const locationsRef = collection(firestore, "locations");
           const locationQuery = query(
             locationsRef,
-            where("selected", "==", true), // Filtro principal
-            where("userId", "==", doc.id) // Campo adicional
+            where("selected", "==", true),
+            where("userId", "==", doc.id)
           );
 
           const locationSnapshot = await getDocs(locationQuery);
-          
+
           if (locationSnapshot.empty) {
-        console.log(`Empleado ${doc.id} no tiene ubicación seleccionada`);
-        return null; // Filtra empleados sin ubicación
+            console.log(`Empleado ${doc.id} no tiene ubicación seleccionada`);
+            return null;
           }
 
           const location = locationSnapshot.docs[0]?.data();
-        
+
           return {
-        id: doc.id,
-        nombre: userData.nombre,
-        service: userData.service,
-        selectedLocation: location
-          ? { latitude: location.latitude, longitude: location.longitude }
-          : undefined,
+            id: doc.id,
+            nombre: userData.nombre,
+            apellido: userData.apellido,
+            service: userData.service,
+            selectedLocation: location
+              ? { latitude: location.latitude, longitude: location.longitude }
+              : undefined,
+            solicitudEnviada: tieneSolicitud,
           };
         })
-      ).then(results => results.filter(Boolean)); // Elimina nulls
+      ).then((results) => results.filter(Boolean));
 
       setUsers(employees);
       setFilteredUsers(employees);
@@ -119,7 +143,7 @@ const UsersScreen = () => {
     lat2: number,
     lon2: number
   ) => {
-    const R = 6371; // Radio de la Tierra en km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
 
@@ -131,7 +155,7 @@ const UsersScreen = () => {
         Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distancia en km
+    return R * c;
   };
 
   const handleFilter = (text: string) => {
@@ -146,9 +170,44 @@ const UsersScreen = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: User }) => {
-    let distance = "Distancia no disponible";
+  const handleContratar = async (professionalId: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Debes iniciar sesión para contratar servicios");
+        return;
+      }
 
+      // Crear documento en colección de solicitudes
+      const solicitudRef = collection(firestore, "solicitudes");
+      const nuevaSolicitud = {
+        clienteId: user.uid,
+        profesionalId: professionalId,
+        fecha: new Date(),
+        estado: "pendiente", // Puede ser: pendiente, aceptada, rechazada, completada
+        servicio: users.find((u) => u.id === professionalId)?.service || "",
+      };
+
+      await addDoc(solicitudRef, nuevaSolicitud);
+
+      // Actualizar estado local
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === professionalId
+            ? { ...user, solicitudEnviada: true }
+            : user
+        )
+      );
+
+      alert("Solicitud enviada correctamente");
+    } catch (error) {
+      console.error("Error al enviar solicitud:", error);
+      alert("Error al enviar la solicitud");
+    }
+  };
+
+  const renderItem = ({ item }: { item: User }) => {
+    let distance = "N/A";
     if (userLocation && item.selectedLocation) {
       const distanceValue = calculateDistance(
         userLocation.latitude,
@@ -156,18 +215,33 @@ const UsersScreen = () => {
         item.selectedLocation.latitude,
         item.selectedLocation.longitude
       );
-
-      distance = `${distanceValue.toFixed(2)} km`;
+      distance = `${distanceValue.toFixed(1)} km`;
     }
-
+  
     return (
       <View style={styles.userCard}>
-        <Text style={styles.userName}>{item.nombre}</Text>
-        <Text style={styles.userService}>Servicio: {item.service}</Text>
-        <Text style={styles.userDistance}>{distance}</Text>
+        {/* Icono de usuario */}
+        <View style={styles.iconContainer}>
+          <Ionicons name="person-circle-outline" size={30} color="#6D28D9" />
+        </View>
+  
+        {/* Información del usuario */}
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{item.nombre}</Text>
+          <Text style={styles.userService}>{item.service}</Text>
+        </View>
+  
+        {/* Rating y distancia */}
+        <View style={styles.extraInfo}>
+          <Text style={styles.ratingText}>4.5</Text>
+          <FontAwesome name="star" size={14} color="#6D28D9" />
+          <Text style={styles.distanceText}>{distance}</Text>
+          <Ionicons name="location-outline" size={14} color="#6D28D9" />
+        </View>
       </View>
     );
   };
+  
 
   if (loading) {
     return (
@@ -212,6 +286,13 @@ const styles = StyleSheet.create({
     marginTop: 50,
     color: "#333",
   },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end", // Alinea a la derecha
+    alignItems: "center", // Asegura que el botón esté centrado verticalmente
+    marginTop: 10,
+    paddingRight: 10, // Añade un poco de separación del borde derecho
+  },
   filterInput: {
     marginBottom: 16,
     padding: 8,
@@ -220,16 +301,37 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
   },
+  infoRow: {
+    flexDirection: "row", // Alinea elementos en fila
+    justifyContent: "space-between", // Distribuye espacio entre textos y botón
+    alignItems: "center", // Asegura alineación vertical
+    marginTop: 8, // Separación del nombre
+  },
   userCard: {
-    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
-    marginBottom: 12,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#6D28D9",
+    marginBottom: 8,
+  },
+  iconContainer: {
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1, // Toma el espacio disponible
+  },
+  extraInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4, // Espaciado entre elementos
+  },
+  ratingText: {
+    fontSize: 14,
+    color: "#6D28D9",
   },
   userName: {
     fontSize: 16,
@@ -238,9 +340,13 @@ const styles = StyleSheet.create({
   },
   userService: {
     fontSize: 14,
-    color: "#666",
+    color: "#6D28D9",
   },
   userDistance: {
+    fontSize: 14,
+    color: "#666",
+  },
+  distanceText: {
     fontSize: 14,
     color: "#666",
   },
@@ -253,6 +359,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  contractButton: {
+    paddingVertical: 6, 
+    paddingHorizontal: 10, 
+    backgroundColor: "#4F46E5",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  contractButtonDisabled: {
+    backgroundColor: "#cccccc",
+  },
+  contractButtonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
 
