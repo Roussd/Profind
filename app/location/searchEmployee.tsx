@@ -237,6 +237,19 @@ const UsersScreen = () => {
           <FontAwesome name="star" size={14} color="#6D28D9" />
           <Text style={styles.distanceText}>{distance}</Text>
           <Ionicons name="location-outline" size={14} color="#6D28D9" />
+          {/* Botón de contratar */}
+        <TouchableOpacity
+          style={[
+            styles.contractButton,
+            item.solicitudEnviada && styles.contractButtonDisabled,
+          ]}
+          onPress={() => handleContratar(item.id)}
+          disabled={item.solicitudEnviada}
+        >
+          <Text style={styles.contractButtonText}>
+            {item.solicitudEnviada ? "Solicitado" : "Contratar"}
+          </Text>
+        </TouchableOpacity>
         </View>
       </View>
     );
@@ -254,7 +267,7 @@ const UsersScreen = () => {
   return (
     <View style={styles.container}>
       <BackButton />
-      <Text style={styles.header}>Usuarios Registrados</Text>
+      <Text style={styles.header}>Profesionales</Text>
       <TextInput
         style={styles.filterInput}
         placeholder="Filtrar por tipo de servicio..."
