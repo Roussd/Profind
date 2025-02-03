@@ -19,7 +19,6 @@ type UserProfile = {
   birthDate?: string;
   country?: string;
   gender?: string;
-  direccion: string;
 };
 
 const EditProfileScreen = () => {
@@ -34,7 +33,6 @@ const EditProfileScreen = () => {
     birthDate: '',
     country: '',
     gender: '',
-    direccion: '',
   });
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
@@ -48,25 +46,24 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No se pudo obtener la información del usuario.');
         return;
       }
-
+  
       try {
         const userDoc = doc(firestore, 'users', userId);
         const userSnap = await getDoc(userDoc);
-
+  
         if (userSnap.exists()) {
           const userData = userSnap.data() as UserProfile;
-
+  
           setForm({
             nombre: userData.nombre || '',
             apellido: userData.apellido || '',
             rut: userData.rut || '',
             fechaNacimiento: userData.fechaNacimiento || '',
-            email: userData.email || '',
             telefono: userData.telefono || '',
             birthDate: userData.birthDate || '',
             country: userData.country || '',
             gender: userData.gender || '',
-            direccion: userData.direccion || '',
+            email: auth.currentUser?.email || userData.email || '',
           });
         } else {
           Alert.alert('Error', 'No se encontraron datos para este usuario.');
@@ -76,10 +73,9 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'Hubo un problema al cargar los datos del usuario.');
       }
     };
-
+  
     fetchUserData();
-  }, []);
-
+  }, []);  
 
 
   const validateForm = () => {
@@ -200,14 +196,6 @@ const EditProfileScreen = () => {
               onSelect={(gender) => handleInputChange('gender', gender)}
             />
           </View>
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Dirección</Text>
-          <TextInput
-            style={styles.input}
-            value={form.direccion}
-            onChangeText={(text) => handleInputChange('direccion', text)}
-          />
         </View>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>GUARDAR</Text>
