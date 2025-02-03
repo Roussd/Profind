@@ -172,9 +172,18 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.menuSection}>
-          <MenuItem icon="help-circle-outline" text="Soporte" />
+          <MenuItem 
+            icon="help-circle-outline" 
+            text="Soporte" 
+            onPress={() => router.push('../profile/support')}
+          />
           <MenuItem icon="call-outline" text="Contacto" />
-          <MenuItem icon="lock-closed-outline" text="Políticas de Privacidad" isLast />
+          <MenuItem 
+            icon="lock-closed-outline" 
+            text="Políticas de Privacidad" 
+            onPress={() => router.push('../profile/privacyPolicy')}
+            isLast 
+          />
         </View>
         <View style={styles.logoutSection}>
           <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
