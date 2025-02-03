@@ -7,9 +7,12 @@ import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
+import { useFocusEffect } from 'expo-router';
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userData, setUserData] = useState({
     nombre: '',
     email: '',
@@ -30,10 +33,13 @@ const ProfileScreen = () => {
         if (userSnap.exists()) {
           setUserData({
             nombre: userSnap.data().nombre || 'Usuario',
-            email: userSnap.data().email || 'No especificado',
+            email: auth.currentUser?.email || userSnap.data().email || 'No especificado',
           });
         } else {
-          Alert.alert('Error', 'No se encontraron datos para este usuario.');
+          setUserData({
+            nombre: 'Usuario',
+            email: auth.currentUser?.email || 'No especificado',
+          });
         }
       } catch (error) {
         console.error('Error al obtener los datos del usuario:', error);
@@ -43,6 +49,28 @@ const ProfileScreen = () => {
 
     fetchUserData();
   }, []);
+
+
+  const fetchProfileImage = async () => {
+    if (!auth.currentUser?.photoURL) {
+      setProfileImage(null);
+      return;
+    }
+
+    try {
+      const downloadURL = await getDownloadURL(ref(getStorage(), auth.currentUser.photoURL));
+      setProfileImage(downloadURL);
+    } catch (error) {
+      console.log('Error al obtener imagen:', error);
+      setProfileImage(null);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProfileImage();
+    }, [])
+  );
 
 
   const handleSignOut = async () => {
@@ -101,10 +129,17 @@ const ProfileScreen = () => {
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <Image
-              source={require('../assets/images/avatar.png')}
+              source={
+                profileImage
+                  ? { uri: profileImage }
+                  : require('../assets/images/default_avatar.jpg')
+              }
               style={styles.avatar}
             />
-            <TouchableOpacity style={styles.editButton}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => router.push('/profile/editProfilePicture')}
+            >
               <Ionicons name="pencil" size={16} color="#4F46E5" />
             </TouchableOpacity>
           </View>
