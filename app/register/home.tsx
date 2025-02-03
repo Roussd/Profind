@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,55 +9,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { signInWithCredential, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { auth, firestore } from '../../config/firebase';
-import { EXPO_GOOGLE_CLIENT_ID } from '@env'; // Importamos la variable segura
-
-WebBrowser.maybeCompleteAuthSession();
 
 const RegisterHomeScreen = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-
-  // Configuración del inicio de sesión con Google
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: EXPO_GOOGLE_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      handleGoogleSignIn(credential);
-    }
-  }, [response]);
-
-  // Manejo del registro con Google
-  const handleGoogleSignIn = async (credential) => {
-    try {
-      const userCredential = await signInWithCredential(auth, credential);
-      const userId = userCredential.user.uid;
-
-      // Verificar si el usuario ya tiene datos en Firestore
-      const userDocRef = doc(firestore, 'users', userId);
-      const userDoc = await getDoc(userDocRef);
-
-      if (!userDoc.exists()) {
-        // Si es nuevo, guardar la variable profileCompleted
-        await setDoc(userDocRef, { profileCompleted: false });
-      }
-
-      router.push('/register/register');
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'No se pudo iniciar sesión con Google.');
-    }
-  };
 
   // Función para manejar el registro
   const handleRegister = async () => {
@@ -177,7 +137,7 @@ const RegisterHomeScreen = () => {
       </View>
 
       {/* Botones de inicio de sesión social */}
-      <TouchableOpacity style={styles.socialButton} onPress={() => promptAsync()}>
+      <TouchableOpacity style={styles.socialButton} onPress={() => console.log('Registrarse con Google')}>
         <Ionicons name="logo-google" size={22} />
         <Text style={styles.socialButtonText}>Registrarse con Google</Text>
       </TouchableOpacity>
