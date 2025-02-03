@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
+import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { firestore, auth } from '../../config/firebase';
 
 const SecurityScreen = () => {
   const router = useRouter();
@@ -20,14 +23,60 @@ const SecurityScreen = () => {
     setSuspendModalVisible(true);
   };
 
-  const confirmDeleteAccount = () => {
-    Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente.');
-    setDeleteModalVisible(false);
+  const confirmDeleteAccount = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        Alert.alert('Error', 'Usuario no autenticado.');
+        return;
+      }
+
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+
+      const userDoc = doc(firestore, 'users', user.uid);
+      await deleteDoc(userDoc);
+
+      await deleteUser(user);
+
+      Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente.');
+      setDeleteModalVisible(false);
+      setPassword('');
+      router.push('/login');
+    } catch (error) {
+      console.error('Error al eliminar cuenta:', error);
+      Alert.alert('Error', 'No se pudo eliminar la cuenta. Verifica tu contraseña.');
+      setPassword('');
+    }
   };
 
-  const confirmSuspendAccount = () => {
-    Alert.alert('Cuenta suspendida', 'Tu cuenta ha sido suspendida temporalmente.');
-    setSuspendModalVisible(false);
+  const confirmSuspendAccount = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        Alert.alert('Error', 'Usuario no autenticado.');
+        return;
+      }
+
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+
+      const userDoc = doc(firestore, 'users', user.uid);
+      await updateDoc(userDoc, {
+        suspended: true,
+        suspendedAt: new Date().toISOString(),
+      });
+
+      Alert.alert('Cuenta suspendida', 'Tu cuenta ha sido suspendida temporalmente.');
+      setSuspendModalVisible(false);
+      setPassword('');
+      await auth.signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error('Error al suspender cuenta:', error);
+      Alert.alert('Error', 'No se pudo suspender la cuenta. Verifica tu contraseña.');
+      setPassword('');
+    }
   };
 
   return (
@@ -74,7 +123,10 @@ const SecurityScreen = () => {
             <TouchableOpacity style={styles.buttonlogin} onPress={confirmDeleteAccount}>
               <Text style={styles.buttonText}>Confirmar Eliminación</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonregister} onPress={() => setDeleteModalVisible(false)}>
+            <TouchableOpacity style={styles.buttonregister} onPress={() => {
+              setDeleteModalVisible(false);
+              setPassword('');
+            }}>
               <Text style={styles.buttonTextRegister}>Cancelar</Text>
             </TouchableOpacity>
           </View>
@@ -100,7 +152,10 @@ const SecurityScreen = () => {
             <TouchableOpacity style={styles.buttonlogin} onPress={confirmSuspendAccount}>
               <Text style={styles.buttonText}>Confirmar Suspensión</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonregister} onPress={() => setSuspendModalVisible(false)}>
+            <TouchableOpacity style={styles.buttonregister} onPress={() => {
+              setSuspendModalVisible(false);
+              setPassword('');
+            }}>
               <Text style={styles.buttonTextRegister}>Cancelar</Text>
             </TouchableOpacity>
           </View>
@@ -166,7 +221,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  
+
   buttonregister: {
     backgroundColor: '#FFF',
     width: 280,

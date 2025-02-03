@@ -15,6 +15,7 @@ const ProfileScreen = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userData, setUserData] = useState({
     nombre: '',
+    apellido: '',
     email: '',
   });
 
@@ -33,11 +34,13 @@ const ProfileScreen = () => {
         if (userSnap.exists()) {
           setUserData({
             nombre: userSnap.data().nombre || 'Usuario',
+            apellido: userSnap.data().apellido || '',
             email: auth.currentUser?.email || userSnap.data().email || 'No especificado',
           });
         } else {
           setUserData({
             nombre: 'Usuario',
+            apellido: '',
             email: auth.currentUser?.email || 'No especificado',
           });
         }
@@ -143,7 +146,9 @@ const ProfileScreen = () => {
               <Ionicons name="pencil" size={16} color="#4F46E5" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>{userData.nombre}</Text>
+          <Text style={styles.name}>
+            {userData.nombre} {userData.apellido}
+          </Text>
           <Text style={styles.email}>{userData.email}</Text>
         </View>
 
@@ -172,17 +177,17 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.menuSection}>
-          <MenuItem 
-            icon="help-circle-outline" 
-            text="Soporte" 
+          <MenuItem
+            icon="help-circle-outline"
+            text="Soporte"
             onPress={() => router.push('../profile/support')}
           />
           <MenuItem icon="call-outline" text="Contacto" />
-          <MenuItem 
-            icon="lock-closed-outline" 
-            text="Políticas de Privacidad" 
+          <MenuItem
+            icon="lock-closed-outline"
+            text="Políticas de Privacidad"
             onPress={() => router.push('../profile/privacyPolicy')}
-            isLast 
+            isLast
           />
         </View>
         <View style={styles.logoutSection}>

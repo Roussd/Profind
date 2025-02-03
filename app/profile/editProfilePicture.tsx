@@ -50,7 +50,6 @@ const EditProfilePicture = () => {
     setUploading(true);
     
     try {
-      // Convertir imagen a Uint8Array
       const { uri } = await FileSystem.getInfoAsync(image);
       const fileContent = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
@@ -59,16 +58,14 @@ const EditProfilePicture = () => {
       const buffer = Buffer.from(fileContent, 'base64');
       const uint8Array = new Uint8Array(buffer);
 
-      // Subir a Firebase Storage
       const storageRef = ref(storage, `profilepicture/${auth.currentUser.uid}`);
       await uploadBytes(storageRef, uint8Array, {
         contentType: 'image/jpeg',
       });
 
-      // Obtener URL de descarga
+
       const downloadURL = await getDownloadURL(storageRef);
 
-      // Actualizar perfil del usuario
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
           photoURL: downloadURL
