@@ -17,6 +17,7 @@ import {
   addDoc,
   getDoc,
   doc,
+  onSnapshot,
 } from "firebase/firestore";
 import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
@@ -45,68 +46,83 @@ const UsersScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let unsubscribeEmployees: () => void;
+    let unsubscribeLocation: () => void;
+
     const fetchData = async () => {
       await fetchUserLocation();
-      await fetchEmployees();
+      unsubscribeEmployees = await fetchEmployees();
       setLoading(false);
     };
+
     fetchData();
+
+    return () => {
+      unsubscribeEmployees?.();
+      unsubscribeLocation?.();
+    };
   }, []);
 
   const fetchEmployees = async () => {
     try {
       const user = auth.currentUser;
+      if (!user) return;
+
       const usersRef = collection(firestore, "users");
       const q = query(usersRef, where("profileType", "in", ["1", "3"]));
-      const snapshot = await getDocs(q);
 
-      const employees = await Promise.all(
-        snapshot.docs.map(async (doc) => {
-          const userData = doc.data();
+      // Escuchar cambios en tiempo real
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const employees = await Promise.all(
+          snapshot.docs.map(async (doc) => {
+            const userData = doc.data();
 
-          // Verificar si ya existe una solicitud
-          const solicitudesRef = collection(firestore, "solicitudes");
-          const solicitudQuery = query(
-            solicitudesRef,
-            where("clienteId", "==", user?.uid),
-            where("profesionalId", "==", doc.id)
-          );
+            // Verificar si ya existe una solicitud
+            const solicitudesRef = collection(firestore, "solicitudes");
+            const solicitudQuery = query(
+              solicitudesRef,
+              where("clienteId", "==", user?.uid),
+              where("profesionalId", "==", doc.id)
+            );
 
-          const solicitudSnapshot = await getDocs(solicitudQuery);
-          const tieneSolicitud = !solicitudSnapshot.empty;
+            const solicitudSnapshot = await getDocs(solicitudQuery);
+            const tieneSolicitud = !solicitudSnapshot.empty;
 
-          // Obtener la ubicación seleccionada del empleado
-          const locationsRef = collection(firestore, "locations");
-          const locationQuery = query(
-            locationsRef,
-            where("selected", "==", true),
-            where("userId", "==", doc.id)
-          );
+            // Obtener la ubicación seleccionada del empleado
+            const locationsRef = collection(firestore, "locations");
+            const locationQuery = query(
+              locationsRef,
+              where("selected", "==", true),
+              where("userId", "==", doc.id)
+            );
 
-          const locationSnapshot = await getDocs(locationQuery);
+            const locationSnapshot = await getDocs(locationQuery);
 
-          if (locationSnapshot.empty) {
-            console.log(`Empleado ${doc.id} no tiene ubicación seleccionada`);
-            return null;
-          }
+            if (locationSnapshot.empty) {
+              console.log(`Empleado ${doc.id} no tiene ubicación seleccionada`);
+              return null;
+            }
 
-          const location = locationSnapshot.docs[0]?.data();
+            const location = locationSnapshot.docs[0]?.data();
 
-          return {
-            id: doc.id,
-            nombre: userData.nombre,
-            apellido: userData.apellido,
-            service: userData.service,
-            selectedLocation: location
-              ? { latitude: location.latitude, longitude: location.longitude }
-              : undefined,
-            solicitudEnviada: tieneSolicitud,
-          };
-        })
-      ).then((results) => results.filter(Boolean));
+            return {
+              id: doc.id,
+              nombre: userData.nombre,
+              apellido: userData.apellido,
+              service: userData.service,
+              selectedLocation: location
+                ? { latitude: location.latitude, longitude: location.longitude }
+                : undefined,
+              solicitudEnviada: tieneSolicitud,
+            };
+          })
+        ).then((results) => results.filter(Boolean));
 
-      setUsers(employees);
-      setFilteredUsers(employees);
+        setUsers(employees);
+        setFilteredUsers(employees);
+      });
+
+      return unsubscribe; // Importante para limpiar el listener
     } catch (error) {
       console.error("Error fetching employees:", error);
       setLoading(false);
@@ -180,10 +196,10 @@ const UsersScreen = () => {
         return;
       }
 
-      //Obtener datos del cliente
+      // Obtener datos del cliente
       const userDoc = await getDoc(doc(firestore, "users", user.uid));
       const userData = userDoc.data();
-      
+
       // Crear documento en colección de solicitudes
       const solicitudRef = collection(firestore, "solicitudes");
       const nuevaSolicitud = {
@@ -191,15 +207,24 @@ const UsersScreen = () => {
         clienteNombre: `${userData?.nombre} ${userData?.apellido}`.trim() || "Cliente Anónimo",
         profesionalId: professionalId,
         servicio: users.find((u) => u.id === professionalId)?.service || "",
-        fecha: new Date().toISOString(),
+        fecha: new Date(),
         estado: "pendiente",
       };
 
-      await addDoc(collection(firestore, "solicitudes"), nuevaSolicitud);
+      await addDoc(solicitudRef, nuevaSolicitud);
 
-      // Actualizar estado local
+      // Actualización optimista del estado
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
+          user.id === professionalId
+            ? { ...user, solicitudEnviada: true }
+            : user
+        )
+      );
+
+      // Forzar actualización de la lista filtrada
+      setFilteredUsers((prev) =>
+        prev.map((user) =>
           user.id === professionalId
             ? { ...user, solicitudEnviada: true }
             : user
@@ -210,6 +235,23 @@ const UsersScreen = () => {
     } catch (error) {
       console.error("Error al enviar solicitud:", error);
       alert("Error al enviar la solicitud");
+
+      // Revertir en caso de error
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === professionalId
+            ? { ...user, solicitudEnviada: false }
+            : user
+        )
+      );
+
+      setFilteredUsers((prev) =>
+        prev.map((user) =>
+          user.id === professionalId
+            ? { ...user, solicitudEnviada: false }
+            : user
+        )
+      );
     }
   };
 
@@ -224,20 +266,20 @@ const UsersScreen = () => {
       );
       distance = `${distanceValue.toFixed(1)} km`;
     }
-  
+
     return (
       <View style={styles.userCard}>
         {/* Icono de usuario */}
         <View style={styles.iconContainer}>
           <Ionicons name="person-circle-outline" size={30} color="#6D28D9" />
         </View>
-  
+
         {/* Información del usuario */}
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{item.nombre}</Text>
           <Text style={styles.userService}>{item.service}</Text>
         </View>
-  
+
         {/* Rating y distancia */}
         <View style={styles.extraInfo}>
           <Text style={styles.ratingText}>4.5</Text>
@@ -245,23 +287,22 @@ const UsersScreen = () => {
           <Text style={styles.distanceText}>{distance}</Text>
           <Ionicons name="location-outline" size={14} color="#6D28D9" />
           {/* Botón de contratar */}
-        <TouchableOpacity
-          style={[
-            styles.contractButton,
-            item.solicitudEnviada && styles.contractButtonDisabled,
-          ]}
-          onPress={() => handleContratar(item.id)}
-          disabled={item.solicitudEnviada}
-        >
-          <Text style={styles.contractButtonText}>
-            {item.solicitudEnviada ? "Solicitado" : "Contratar"}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.contractButton,
+              item.solicitudEnviada && styles.contractButtonDisabled,
+            ]}
+            onPress={() => handleContratar(item.id)}
+            disabled={item.solicitudEnviada}
+          >
+            <Text style={styles.contractButtonText}>
+              {item.solicitudEnviada ? "Solicitado" : "Contratar"}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
   };
-  
 
   if (loading) {
     return (
@@ -381,8 +422,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   contractButton: {
-    paddingVertical: 6, 
-    paddingHorizontal: 10, 
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     backgroundColor: "#4F46E5",
     borderRadius: 8,
     alignItems: "center",

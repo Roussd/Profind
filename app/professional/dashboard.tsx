@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
-import { collection, query, where, getDocs, updateDoc, orderBy, doc } from "firebase/firestore";
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  StyleSheet, 
+  ActivityIndicator, 
+  TouchableOpacity 
+} from "react-native";
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  updateDoc, 
+  orderBy, 
+  doc 
+} from "firebase/firestore";
 import { auth, firestore } from "../../config/firebase";
 import BackButton from "../../components/backButton";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 
 interface Request {
   id: string;
@@ -12,40 +27,120 @@ interface Request {
   servicio: string;
   fecha: string;
   estado: "pendiente" | "aceptada" | "rechazada" | "completada";
+  clienteLocation?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 const ProfessionalDashboard = () => {
   const [requests, setRequests] = useState<Request[]>([]);
+  const [professionalLocation, setProfessionalLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchData = async () => {
       const user = auth.currentUser;
       if (!user) return;
 
       try {
+        // Obtener ubicación del profesional
+        const locationsRef = collection(firestore, "locations");
         const q = query(
+          locationsRef,
+          where("userId", "==", user.uid),
+          where("selected", "==", true)
+        );
+        
+        const locationSnapshot = await getDocs(q);
+        if (!locationSnapshot.empty) {
+          const locationData = locationSnapshot.docs[0].data();
+          setProfessionalLocation({
+            latitude: locationData.latitude,
+            longitude: locationData.longitude
+          });
+        }
+
+        // Obtener solicitudes
+        const requestsQuery = query(
           collection(firestore, "solicitudes"),
           where("profesionalId", "==", user.uid),
           orderBy("fecha", "desc")
         );
 
-        const snapshot = await getDocs(q);
-        const requestsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Request[];
+        const snapshot = await getDocs(requestsQuery);
+        
+        const requestsData = await Promise.all(
+          snapshot.docs.map(async (doc) => {
+            const data = doc.data();
+
+             // Manejo seguro de fechas
+          const fecha = data.fecha?.toDate?.() || new Date(data.fecha);
+            
+            // Obtener ubicación del cliente
+            const clientLocationQuery = query(
+              collection(firestore, "locations"),
+              where("userId", "==", data.clienteId),
+              where("selected", "==", true)
+            );
+            
+            const clientLocationSnapshot = await getDocs(clientLocationQuery);
+            let clienteLocation = undefined;
+            
+            if (!clientLocationSnapshot.empty) {
+              const locationData = clientLocationSnapshot.docs[0].data();
+              clienteLocation = {
+                latitude: locationData.latitude,
+                longitude: locationData.longitude
+              };
+            }
+
+            return {
+              id: doc.id,
+              clienteId: data.clienteId,
+              clienteNombre: data.clienteNombre,
+              servicio: data.servicio,
+              fecha: fecha.toISOString(),
+              estado: data.estado,
+              clienteLocation
+            };
+          })
+        );
 
         setRequests(requestsData);
       } catch (error) {
-        console.error("Error fetching requests:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRequests();
+    fetchData();
   }, []);
+
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   const handleUpdateStatus = async (requestId: string, newStatus: "aceptada" | "rechazada") => {
     try {
@@ -63,47 +158,70 @@ const ProfessionalDashboard = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: Request }) => (
-    <View style={styles.requestCard}>
-      <View style={styles.requestHeader}>
-        <Text style={styles.serviceText}>{item.servicio}</Text>
-        <Text style={styles.dateText}>
-          {new Date(item.fecha).toLocaleDateString()}
-        </Text>
-      </View>
-      
-      <Text style={styles.clientText}>Cliente: {item.clienteNombre}</Text>
-      
-      <View style={styles.statusContainer}>
-        <Text style={[
-          styles.statusText,
-          item.estado === "pendiente" && styles.pendingStatus,
-          item.estado === "aceptada" && styles.acceptedStatus,
-          item.estado === "rechazada" && styles.rejectedStatus
-        ]}>
-          {item.estado.toUpperCase()}
-        </Text>
-      </View>
+  const renderItem = ({ item }: { item: Request }) => {
+    let distance = "Distancia no disponible";
+    
+    if (professionalLocation && item.clienteLocation) {
+      const distanceValue = calculateDistance(
+        professionalLocation.latitude,
+        professionalLocation.longitude,
+        item.clienteLocation.latitude,
+        item.clienteLocation.longitude
+      );
+      distance = `${distanceValue.toFixed(1)} km`;
+    }
 
-      {item.estado === "pendiente" && (
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.acceptButton]}
-            onPress={() => handleUpdateStatus(item.id, "aceptada")}
-          >
-            <Text style={styles.actionText}>Aceptar</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.rejectButton]}
-            onPress={() => handleUpdateStatus(item.id, "rechazada")}
-          >
-            <Text style={styles.actionText}>Rechazar</Text>
-          </TouchableOpacity>
+    return (
+      <View style={styles.requestCard}>
+        <View style={styles.requestHeader}>
+          <Text style={styles.serviceText}>{item.servicio}</Text>
+          <Text style={styles.dateText}>
+            {new Date(item.fecha).toLocaleDateString("es-ES", {
+              day: "numeric",
+              month: "long",
+              year: "numeric"
+            })}
+          </Text>
         </View>
-      )}
-    </View>
-  );
+        
+        <Text style={styles.clientText}>Cliente: {item.clienteNombre}</Text>
+        
+        <View style={styles.distanceContainer}>
+          <Ionicons name="location-outline" size={14} color="#6D28D9" />
+          <Text style={styles.distanceText}>{distance}</Text>
+        </View>
+
+        <View style={styles.statusContainer}>
+          <Text style={[
+            styles.statusText,
+            item.estado === "pendiente" && styles.pendingStatus,
+            item.estado === "aceptada" && styles.acceptedStatus,
+            item.estado === "rechazada" && styles.rejectedStatus
+          ]}>
+            {item.estado.toUpperCase()}
+          </Text>
+        </View>
+
+        {item.estado === "pendiente" && (
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.acceptButton]}
+              onPress={() => handleUpdateStatus(item.id, "aceptada")}
+            >
+              <Text style={styles.actionText}>Aceptar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={() => handleUpdateStatus(item.id, "rechazada")}
+            >
+              <Text style={styles.actionText}>Rechazar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -172,7 +290,17 @@ const styles = StyleSheet.create({
   clientText: {
     fontSize: 14,
     color: "#475569",
-    marginBottom: 12,
+    marginBottom: 4,
+  },
+  distanceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 8,
+  },
+  distanceText: {
+    fontSize: 14,
+    color: "#64748B",
   },
   statusContainer: {
     flexDirection: "row",
