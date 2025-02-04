@@ -164,7 +164,7 @@ export default function SavedLocations() {
       setSelectedLocation(null);
 
       alert(`Ubicación "${selectedLocation.label}" activada.`);
-      router.push("location/searchEmployee");
+      router.push("professional/searchEmployee");
     } catch (error) {
       console.error("Error al seleccionar ubicación:", error);
       alert("Error al guardar la selección.");

@@ -18,7 +18,7 @@ const BottomNavigation = () => {
       <TouchableOpacity style={[styles.navItem, styles.navItemCenter]} onPress={() => router.push('/location/savedLocations')}>
         <FontAwesome5 name="search" size={28} color="#FFF" />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.navItem}>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/professional/dashboard')}>
         <MaterialIcons name="message" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Pedidos</Text>
       </TouchableOpacity>

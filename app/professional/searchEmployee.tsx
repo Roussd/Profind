@@ -15,6 +15,8 @@ import {
   getDocs,
   orderBy,
   addDoc,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
@@ -178,17 +180,22 @@ const UsersScreen = () => {
         return;
       }
 
+      //Obtener datos del cliente
+      const userDoc = await getDoc(doc(firestore, "users", user.uid));
+      const userData = userDoc.data();
+      
       // Crear documento en colección de solicitudes
       const solicitudRef = collection(firestore, "solicitudes");
       const nuevaSolicitud = {
         clienteId: user.uid,
+        clienteNombre: `${userData?.nombre} ${userData?.apellido}`.trim() || "Cliente Anónimo",
         profesionalId: professionalId,
-        fecha: new Date(),
-        estado: "pendiente", // Puede ser: pendiente, aceptada, rechazada, completada
         servicio: users.find((u) => u.id === professionalId)?.service || "",
+        fecha: new Date().toISOString(),
+        estado: "pendiente",
       };
 
-      await addDoc(solicitudRef, nuevaSolicitud);
+      await addDoc(collection(firestore, "solicitudes"), nuevaSolicitud);
 
       // Actualizar estado local
       setUsers((prevUsers) =>
