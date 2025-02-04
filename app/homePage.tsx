@@ -10,10 +10,12 @@ import {
   FlatList,
   Animated,
   Dimensions,
+  Modal,
 } from "react-native"
 import { FontAwesome5, Ionicons } from "@expo/vector-icons"
 import BottomNavigation from "components/bottomNavigation"
 import { LinearGradient } from "expo-linear-gradient"
+import AddRatingScreen from "../components/ratingscreen";
 
 const { width } = Dimensions.get("window")
 
@@ -59,15 +61,16 @@ const professionals = [
 
 
 export default function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const scrollY = new Animated.Value(0)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isRatingModalVisible, setIsRatingModalVisible] = useState(false); 
+  const scrollY = new Animated.Value(0);
 
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [120, 80],
     extrapolate: "clamp",
-  })
+  });
 
   const renderProfessionalCard = ({ item }: { item: Professional }) => (
     <TouchableOpacity style={styles.professionalCard}>
@@ -166,10 +169,19 @@ export default function HomePage() {
             </View>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      <BottomNavigation />
-    </View>
+<BottomNavigation onRatingPress={() => setIsRatingModalVisible(true)} />
+
+<Modal
+  animationType="slide"
+  transparent={true}
+  visible={isRatingModalVisible}
+  onRequestClose={() => setIsRatingModalVisible(false)}
+>
+  <AddRatingScreen onClose={() => setIsRatingModalVisible(false)} />
+</Modal>
+</View>
   )
 }
 

@@ -3,11 +3,11 @@ import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
-const BottomNavigation = () => {
+const BottomNavigation = ({ onRatingPress }) => {
   const router = useRouter();
   return (
     <View style={styles.navigation}>
-      <TouchableOpacity style={styles.navItem}>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/homepage')}>
         <FontAwesome5 name="home" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Inicio</Text>
       </TouchableOpacity>
@@ -18,7 +18,7 @@ const BottomNavigation = () => {
       <TouchableOpacity style={[styles.navItem, styles.navItemCenter]}>
         <FontAwesome5 name="search" size={28} color="#FFF" />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.navItem}>
+      <TouchableOpacity style={styles.navItem} onPress={onRatingPress}>
         <MaterialIcons name="message" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Pedidos</Text>
       </TouchableOpacity>
