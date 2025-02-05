@@ -20,9 +20,10 @@ import {
 } from "firebase/firestore";
 import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import Slider from "@react-native-community/slider";
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 
 interface Location {
   latitude: number;
@@ -69,8 +70,8 @@ const UsersScreen = () => {
   }, []);
 
   useEffect(() => {
-    let unsubscribeEmployees: () => void = () => {};
-    let unsubscribeLocation: () => void = () => {};
+    let unsubscribeEmployees: () => void = () => { };
+    let unsubscribeLocation: () => void = () => { };
 
     const fetchData = async () => {
       await Promise.all([fetchUserLocation(), fetchEmployees()]);
@@ -187,9 +188,9 @@ const UsersScreen = () => {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
@@ -350,48 +351,112 @@ const UsersScreen = () => {
       <BackButton />
       <Text style={styles.header}>Profesionales</Text>
 
-      {/* Filtros horizontales */}
-      <View style={styles.filtersContainer}>
-        <Picker
-          selectedValue={selectedServices[0] || ""}
-          onValueChange={(itemValue) =>
-            setSelectedServices(itemValue ? [itemValue] : [])
-          }
-          style={styles.filterPicker}
-        >
-          <Picker.Item label="Todos los servicios" value="" />
-          {services.map((service) => (
-            <Picker.Item
-              key={service.id}
-              label={service.name}
-              value={service.name}
-            />
-          ))}
-        </Picker>
+      {/* Chips de filtros activos */}
+      <View style={styles.activeFiltersContainer}>
+        {selectedServices[0] && (
+          <View style={styles.filterChip}>
+            <Text style={styles.filterChipText}>{selectedServices[0]}</Text>
+            <TouchableOpacity onPress={() => setSelectedServices([])}>
+              <MaterialIcons name="close" size={16} color="#6D28D9" />
+            </TouchableOpacity>
+          </View>
+        )}
+        {selectedDistance < 100 && (
+          <View style={styles.filterChip}>
+            <Text style={styles.filterChipText}>{selectedDistance} km</Text>
+            <TouchableOpacity onPress={() => setSelectedDistance(100)}>
+              <MaterialIcons name="close" size={16} color="#6D28D9" />
+            </TouchableOpacity>
+          </View>
+        )}
+        {(selectedPriceRange[0] > 0 || selectedPriceRange[1] < 1000) && (
+          <View style={styles.filterChip}>
+            <Text style={styles.filterChipText}>
+              ${selectedPriceRange[0]}-${selectedPriceRange[1]}
+            </Text>
+            <TouchableOpacity onPress={() => setSelectedPriceRange([0, 1000])}>
+              <MaterialIcons name="close" size={16} color="#6D28D9" />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
-        <View style={styles.sliderContainer}>
-          <Text>Distancia: {selectedDistance} km</Text>
+      {/* Filtros mejorados */}
+      <View style={styles.filtersContainer}>
+        {/* Filtro de Servicio */}
+        <View style={styles.filterCard}>
+          <View style={styles.filterHeader}>
+            <MaterialIcons name="category" size={16} color="#6D28D9" />
+            <Text style={styles.filterLabel}>Servicio</Text>
+          </View>
+          <View style={styles.selectContainer}>
+            <Picker
+              selectedValue={selectedServices[0] || ""}
+              onValueChange={(itemValue) =>
+                setSelectedServices(itemValue ? [itemValue] : [])
+              }
+              dropdownIconColor="#6D28D9"
+            >
+              <Picker.Item label="Selecciona un servicio" value="" />
+              {services.map((service) => (
+                <Picker.Item
+                  key={service.id}
+                  label={service.name}
+                  value={service.name}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        {/* Filtro de Distancia */}
+        <View style={styles.filterCard}>
+          <View style={styles.filterHeader}>
+            <MaterialIcons name="location-on" size={16} color="#6D28D9" />
+            <Text style={styles.filterLabel}>Distancia máxima</Text>
+            <Text style={styles.filterValue}>{selectedDistance} km</Text>
+          </View>
           <Slider
-            style={styles.slider}
             minimumValue={0}
             maximumValue={100}
-            step={1}
+            step={10}
             value={selectedDistance}
             onValueChange={setSelectedDistance}
+            minimumTrackTintColor="#6D28D9"
+            maximumTrackTintColor="#E5E7EB"
+            thumbTintColor="#6D28D9"
           />
         </View>
 
-        <View style={styles.sliderContainer}>
-          <Text>Precio: ${selectedPriceRange[0]} - ${selectedPriceRange[1]}</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={1000}
+        {/* Filtro de Precio */}
+        <View style={styles.filterCard}>
+          <View style={styles.filterHeader}>
+            <MaterialIcons name="attach-money" size={16} color="#6D28D9" />
+            <Text style={styles.filterLabel}>Rango de precios</Text>
+            <Text style={styles.filterValue}>
+              ${selectedPriceRange[0]} - ${selectedPriceRange[1]}
+            </Text>
+          </View>
+          <MultiSlider
+            values={[selectedPriceRange[0], selectedPriceRange[1]]}
+            sliderLength={300}
+            onValuesChange={(values) => setSelectedPriceRange(values as [number, number])}
+            min={0}
+            max={1000}
             step={10}
-            value={selectedPriceRange[1]}
-            onValueChange={(value) =>
-              setSelectedPriceRange([selectedPriceRange[0], value])
-            }
+            allowOverlap={false}
+            markerStyle={{
+              height: 24,
+              width: 24,
+              backgroundColor: '#6D28D9'
+            }}
+            selectedStyle={{
+              backgroundColor: '#6D28D9',
+            }}
+            trackStyle={{
+              backgroundColor: '#E5E7EB',
+              height: 4,
+            }}
           />
         </View>
       </View>
@@ -401,7 +466,7 @@ const UsersScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No se encontraron usuarios.</Text>
+          <Text style={styles.emptyText}>No se encontraron profesionales.</Text>
         }
       />
     </View>
@@ -415,16 +480,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
   header: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "bold",
     marginBottom: 16,
     marginTop: 50,
     color: "#333",
   },
   filtersContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     marginBottom: 16,
+  },
+  filterCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginLeft: 8,
+  },
+  filterValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6D28D9',
+  },
+  selectContainer: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  activeFiltersContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDE9FE',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 8,
+  },
+  filterChipText: {
+    color: '#6D28D9',
+    fontSize: 12,
   },
   filterPicker: {
     flex: 1,
