@@ -12,7 +12,7 @@ interface RegisterContextType {
   telefono: string;
   profileType: string; 
   imageUrl: string; 
-  service: string; 
+  service: string[]; // Cambiar a array de strings
   servicePrice: string; 
   setRegisterData: (data: Partial<RegisterContextType>) => void;
 }
@@ -30,7 +30,7 @@ export const RegisterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     telefono: "",
     profileType: "", 
     imageUrl: "", 
-    service: "", 
+    service: [], // Inicializar como array vacío
     servicePrice: "", 
     genero: "",
   });

@@ -1,53 +1,92 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
-  FlatList,
   Alert,
   Image,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
+import { useRegisterContext } from '../../context/userRegisterContext'; 
+import { getFirestore, collection, getDocs } from 'firebase/firestore'; // Importar funciones de Firebase
 
 const ServiceSelectionScreen = () => {
   const router = useRouter();
   const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
-  const [selectedService, setSelectedService] = useState('');
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const services = [
-    { label: 'Gasfiter', value: 'gasfiter' },
-    { label: 'Electricista', value: 'electricista' },
-    { label: 'Carpintero', value: 'carpintero' },
-  ];
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const db = getFirestore();
+        const servicesCollection = collection(db, 'services');
+        const servicesSnapshot = await getDocs(servicesCollection);
+        const servicesList = servicesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Service document data:', data); 
+          return {
+            label: data.name, 
+            value: doc.id,
+          };
+        });
+        console.log('Services fetched from Firebase:', servicesList);
+        setServices(servicesList);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        Alert.alert('Error', 'Hubo un problema al obtener los servicios. Inténtalo de nuevo.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
 
   const handleContinue = () => {
-    if (!selectedService) {
-      Alert.alert('Error', 'Por favor, selecciona un servicio.');
+    if (selectedServices.length === 0) {
+      Alert.alert('Error', 'Por favor, selecciona al menos un servicio.');
       return;
     }
 
     // Almacenar datos en el contexto
     setRegisterData({
-      service: selectedService,
+      service: selectedServices,
     });
 
     router.push('/register/serviceprice'); // Avanzar a la siguiente pantalla
   };
 
-  const renderService = ({ item }) => (
+  const toggleServiceSelection = (service: string) => {
+    setSelectedServices((prevSelectedServices) => {
+      if (prevSelectedServices.includes(service)) {
+        return prevSelectedServices.filter((s) => s !== service);
+      } else {
+        return [...prevSelectedServices, service];
+      }
+    });
+  };
+
+  const renderService = (service) => (
     <TouchableOpacity
-      style={styles.dropdownOption}
-      onPress={() => {
-        setSelectedService(item.label);
-        setDropdownVisible(false);
-      }}
+      key={service.value}
+      style={[
+        styles.serviceOption,
+        selectedServices.includes(service.label) && styles.selectedOption,
+      ]}
+      onPress={() => toggleServiceSelection(service.label)}
     >
-      <Text style={styles.dropdownOptionText}>{item.label}</Text>
+      <Ionicons
+        name={selectedServices.includes(service.label) ? 'checkbox' : 'square-outline'}
+        size={24}
+        color="black"
+      />
+      <Text style={styles.serviceOptionText}>{service.label}</Text>
     </TouchableOpacity>
   );
 
@@ -60,36 +99,13 @@ const ServiceSelectionScreen = () => {
       <Text style={styles.title}>¿Qué servicios ofrecerás?</Text>
       <Image source={require('../../assets/images/people.png')} style={styles.imagen} />
 
-      <TouchableOpacity
-        style={styles.dropdownTrigger}
-        onPress={() => setDropdownVisible(true)}
-      >
-        <Text style={styles.dropdownText}>
-          {selectedService || 'Seleccione una opción'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color="gray" />
-      </TouchableOpacity>
-
-      <Modal
-        visible={dropdownVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setDropdownVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setDropdownVisible(false)}
-        >
-          <View style={styles.dropdownMenu}>
-            <FlatList
-              data={services}
-              keyExtractor={(item) => item.value}
-              renderItem={renderService}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      {loading ? (
+        <ActivityIndicator size="large" color="#4F46E5" />
+      ) : (
+        <ScrollView style={styles.servicesContainer} persistentScrollbar={true}>
+          {services.map(renderService)}
+        </ScrollView>
+      )}
 
       <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
         <Text style={styles.continueButtonText}>Continuar</Text>
@@ -123,43 +139,30 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 10,
   },
-  dropdownTrigger: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 24,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  servicesContainer: {
+    maxHeight: 200, // Limitar la altura para mostrar solo 4 elementos
     marginBottom: 20,
   },
-  dropdownText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
+  serviceOption: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  dropdownMenu: {
-    width: 250,
-    backgroundColor: 'white',
+    paddingVertical: 10, // Reducir el tamaño vertical
+    paddingHorizontal: 8, // Reducir el tamaño horizontal
     borderRadius: 10,
-    padding: 10,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  dropdownOption: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+  selectedOption: {
+    backgroundColor: '#e0e0e0',
   },
-  dropdownOptionText: {
-    fontSize: 14,
+  serviceOptionText: {
+    fontSize: 16,
+    marginLeft: 10,
   },
   continueButton: {
     backgroundColor: '#4F46E5',
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
   helpText: {
     fontSize: 14,
     marginRight: 5,
-  },
+  },  
   backButton: {
     position: 'absolute',
     top: 50,
