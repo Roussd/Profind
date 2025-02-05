@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -22,36 +21,59 @@ import {
 import { firestore, auth } from "../../config/firebase";
 import BackButton from "../../components/backButton";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
+import Slider from "@react-native-community/slider";
+
+interface Location {
+  latitude: number;
+  longitude: number;
+}
 
 interface User {
   id: string;
   nombre: string;
   apellido: string;
   service: string;
-  selectedLocation?: {
-    latitude: number;
-    longitude: number;
-  };
+  selectedLocation?: Location;
   solicitudEnviada?: boolean;
+  price?: number; // Nuevo campo para el precio
+}
+
+interface Service {
+  id: string;
+  name: string;
 }
 
 const UsersScreen = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [serviceFilter, setServiceFilter] = useState("");
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedDistance, setSelectedDistance] = useState<number>(50); // Distancia en km
+  const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 1000]); // Rango de precios
+  const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribeEmployees: () => void;
-    let unsubscribeLocation: () => void;
+    const fetchServices = async () => {
+      const servicesRef = collection(firestore, "services");
+      const snapshot = await getDocs(servicesRef);
+      const servicesList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().name,
+      }));
+      setServices(servicesList);
+    };
+
+    fetchServices();
+  }, []);
+
+  useEffect(() => {
+    let unsubscribeEmployees: () => void = () => {};
+    let unsubscribeLocation: () => void = () => {};
 
     const fetchData = async () => {
-      await fetchUserLocation();
-      unsubscribeEmployees = await fetchEmployees();
+      await Promise.all([fetchUserLocation(), fetchEmployees()]);
       setLoading(false);
     };
 
@@ -59,7 +81,6 @@ const UsersScreen = () => {
 
     return () => {
       unsubscribeEmployees?.();
-      unsubscribeLocation?.();
     };
   }, []);
 
@@ -71,13 +92,11 @@ const UsersScreen = () => {
       const usersRef = collection(firestore, "users");
       const q = query(usersRef, where("profileType", "in", ["1", "3"]));
 
-      // Escuchar cambios en tiempo real
       const unsubscribe = onSnapshot(q, async (snapshot) => {
         const employees = await Promise.all(
           snapshot.docs.map(async (doc) => {
             const userData = doc.data();
 
-            // Verificar si ya existe una solicitud
             const solicitudesRef = collection(firestore, "solicitudes");
             const solicitudQuery = query(
               solicitudesRef,
@@ -88,7 +107,6 @@ const UsersScreen = () => {
             const solicitudSnapshot = await getDocs(solicitudQuery);
             const tieneSolicitud = !solicitudSnapshot.empty;
 
-            // Obtener la ubicación seleccionada del empleado
             const locationsRef = collection(firestore, "locations");
             const locationQuery = query(
               locationsRef,
@@ -114,15 +132,16 @@ const UsersScreen = () => {
                 ? { latitude: location.latitude, longitude: location.longitude }
                 : undefined,
               solicitudEnviada: tieneSolicitud,
+              price: userData.price || 0, // Asignar un valor por defecto si no existe
             };
           })
         ).then((results) => results.filter(Boolean));
 
         setUsers(employees);
-        setFilteredUsers(employees);
+        applyFilters(employees);
       });
 
-      return unsubscribe; // Importante para limpiar el listener
+      return unsubscribe;
     } catch (error) {
       console.error("Error fetching employees:", error);
       setLoading(false);
@@ -176,17 +195,42 @@ const UsersScreen = () => {
     return R * c;
   };
 
-  const handleFilter = (text: string) => {
-    setServiceFilter(text);
-    if (!text.trim()) {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter((user) =>
-        user.service.toLowerCase().includes(text.toLowerCase())
+  const applyFilters = (usersList: User[]) => {
+    let filtered = usersList;
+
+    // Filtrar por servicios seleccionados
+    if (selectedServices.length > 0) {
+      filtered = filtered.filter((user) =>
+        selectedServices.includes(user.service)
       );
-      setFilteredUsers(filtered);
     }
+
+    // Filtrar por distancia
+    if (userLocation) {
+      filtered = filtered.filter((user) => {
+        if (!user.selectedLocation) return false;
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          user.selectedLocation.latitude,
+          user.selectedLocation.longitude
+        );
+        return distance <= selectedDistance;
+      });
+    }
+
+    // Filtrar por rango de precios
+    filtered = filtered.filter(
+      (user) =>
+        user.price >= selectedPriceRange[0] && user.price <= selectedPriceRange[1]
+    );
+
+    setFilteredUsers(filtered);
   };
+
+  useEffect(() => {
+    applyFilters(users);
+  }, [selectedServices, selectedDistance, selectedPriceRange, users]);
 
   const handleContratar = async (professionalId: string) => {
     try {
@@ -196,11 +240,9 @@ const UsersScreen = () => {
         return;
       }
 
-      // Obtener datos del cliente
       const userDoc = await getDoc(doc(firestore, "users", user.uid));
       const userData = userDoc.data();
 
-      // Crear documento en colección de solicitudes
       const solicitudRef = collection(firestore, "solicitudes");
       const nuevaSolicitud = {
         clienteId: user.uid,
@@ -213,7 +255,6 @@ const UsersScreen = () => {
 
       await addDoc(solicitudRef, nuevaSolicitud);
 
-      // Actualización optimista del estado
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
           user.id === professionalId
@@ -222,7 +263,6 @@ const UsersScreen = () => {
         )
       );
 
-      // Forzar actualización de la lista filtrada
       setFilteredUsers((prev) =>
         prev.map((user) =>
           user.id === professionalId
@@ -236,7 +276,6 @@ const UsersScreen = () => {
       console.error("Error al enviar solicitud:", error);
       alert("Error al enviar la solicitud");
 
-      // Revertir en caso de error
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
           user.id === professionalId
@@ -269,24 +308,18 @@ const UsersScreen = () => {
 
     return (
       <View style={styles.userCard}>
-        {/* Icono de usuario */}
         <View style={styles.iconContainer}>
           <Ionicons name="person-circle-outline" size={30} color="#6D28D9" />
         </View>
-
-        {/* Información del usuario */}
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{item.nombre}</Text>
           <Text style={styles.userService}>{item.service}</Text>
         </View>
-
-        {/* Rating y distancia */}
         <View style={styles.extraInfo}>
           <Text style={styles.ratingText}>4.5</Text>
           <FontAwesome name="star" size={14} color="#6D28D9" />
           <Text style={styles.distanceText}>{distance}</Text>
           <Ionicons name="location-outline" size={14} color="#6D28D9" />
-          {/* Botón de contratar */}
           <TouchableOpacity
             style={[
               styles.contractButton,
@@ -316,12 +349,53 @@ const UsersScreen = () => {
     <View style={styles.container}>
       <BackButton />
       <Text style={styles.header}>Profesionales</Text>
-      <TextInput
-        style={styles.filterInput}
-        placeholder="Filtrar por tipo de servicio..."
-        value={serviceFilter}
-        onChangeText={handleFilter}
-      />
+
+      {/* Filtros horizontales */}
+      <View style={styles.filtersContainer}>
+        <Picker
+          selectedValue={selectedServices[0] || ""}
+          onValueChange={(itemValue) =>
+            setSelectedServices(itemValue ? [itemValue] : [])
+          }
+          style={styles.filterPicker}
+        >
+          <Picker.Item label="Todos los servicios" value="" />
+          {services.map((service) => (
+            <Picker.Item
+              key={service.id}
+              label={service.name}
+              value={service.name}
+            />
+          ))}
+        </Picker>
+
+        <View style={styles.sliderContainer}>
+          <Text>Distancia: {selectedDistance} km</Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={100}
+            step={1}
+            value={selectedDistance}
+            onValueChange={setSelectedDistance}
+          />
+        </View>
+
+        <View style={styles.sliderContainer}>
+          <Text>Precio: ${selectedPriceRange[0]} - ${selectedPriceRange[1]}</Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={1000}
+            step={10}
+            value={selectedPriceRange[1]}
+            onValueChange={(value) =>
+              setSelectedPriceRange([selectedPriceRange[0], value])
+            }
+          />
+        </View>
+      </View>
+
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.id}
@@ -347,26 +421,21 @@ const styles = StyleSheet.create({
     marginTop: 50,
     color: "#333",
   },
-  buttonContainer: {
+  filtersContainer: {
     flexDirection: "row",
-    justifyContent: "flex-end", // Alinea a la derecha
-    alignItems: "center", // Asegura que el botón esté centrado verticalmente
-    marginTop: 10,
-    paddingRight: 10, // Añade un poco de separación del borde derecho
-  },
-  filterInput: {
+    justifyContent: "space-between",
     marginBottom: 16,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    backgroundColor: "#fff",
   },
-  infoRow: {
-    flexDirection: "row", // Alinea elementos en fila
-    justifyContent: "space-between", // Distribuye espacio entre textos y botón
-    alignItems: "center", // Asegura alineación vertical
-    marginTop: 8, // Separación del nombre
+  filterPicker: {
+    flex: 1,
+    marginRight: 8,
+  },
+  sliderContainer: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  slider: {
+    width: "100%",
   },
   userCard: {
     flexDirection: "row",
@@ -383,12 +452,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   userInfo: {
-    flex: 1, // Toma el espacio disponible
+    flex: 1,
   },
   extraInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4, // Espaciado entre elementos
+    gap: 4,
   },
   ratingText: {
     fontSize: 14,
@@ -402,10 +471,6 @@ const styles = StyleSheet.create({
   userService: {
     fontSize: 14,
     color: "#6D28D9",
-  },
-  userDistance: {
-    fontSize: 14,
-    color: "#666",
   },
   distanceText: {
     fontSize: 14,
