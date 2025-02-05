@@ -14,8 +14,6 @@ const AddRatingScreen = ({ onClose }) => {
       Alert.alert('Error', 'Por favor, ingrese una valoración.');
       return;
     }
-
-    Alert.alert('Éxito', 'Valoración añadida correctamente.');
     onClose(); // Cerrar el modal después de añadir la valoración
   };
 

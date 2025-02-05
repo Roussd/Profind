@@ -13,6 +13,7 @@ import { useRegisterContext } from '../../context/userRegisterContext'; // Impor
 import { checkRut, prettifyRut } from 'react-rut-formatter'; // Importa las funciones de react-rut-formatter
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; // Importar funciones de Firebase
 import BirthDatePicker from '../../components/birthDatePicker'; // Importar el componente BirthDatePicker
+import GenderPicker from '../../components/genderPicker'; // Importar el componente GenderPicker
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -22,6 +23,7 @@ const RegisterScreen = () => {
   const [rut, setRut] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState(new Date());
   const [telefono, setTelefono] = useState('');
+  const [genero, setGenero] = useState('');
 
   const checkRutInDatabase = async (rut) => {
     const db = getFirestore();
@@ -41,7 +43,7 @@ const RegisterScreen = () => {
   };
 
   const handleContinue = async () => {
-    if (!nombre || !apellido || !rut || !fechaNacimiento || !telefono) {
+    if (!nombre || !apellido || !rut || !fechaNacimiento || !telefono || !genero) {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
       return;
     }
@@ -81,6 +83,7 @@ const RegisterScreen = () => {
       rut: prettifyRut(rut),
       fechaNacimiento,
       telefono,
+      genero,
     });
 
     // Pasar a la pantalla de selección de servicios
@@ -148,6 +151,13 @@ const RegisterScreen = () => {
       <BirthDatePicker
         selectedDate={fechaNacimiento}
         onSelect={setFechaNacimiento}
+      />
+
+      {/* Campo Género */}
+      <Text style={styles.inputLabel}>Género</Text>
+      <GenderPicker
+        selectedGender={genero}
+        onSelect={setGenero}
       />
 
       {/* Botón Continuar */}

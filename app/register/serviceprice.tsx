@@ -8,7 +8,7 @@ import { useRegisterContext } from '../../context/userRegisterContext'; // Impor
 
 const ServicePricingScreen = () => {
   const router = useRouter();
-  const { nombre, apellido, rut, fechaNacimiento, telefono, profileType, imageUrl, service, setRegisterData } = useRegisterContext(); // Usar el hook directamente
+  const { nombre, apellido, rut, fechaNacimiento, telefono, genero, profileType, imageUrl, service, setRegisterData } = useRegisterContext(); 
   const [price, setPrice] = useState('');
 
   const handleContinue = async () => {
@@ -40,11 +40,10 @@ const ServicePricingScreen = () => {
         telefono,
         profileType,
         imageUrl,
+        genero,
         service,
         servicePrice: price,
       });
-
-      Alert.alert('Éxito', 'Información registrada correctamente');
       router.push('/register/finishregister');
     } catch (error) {
       console.error('Error al registrar la información:', error);

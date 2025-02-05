@@ -7,12 +7,13 @@ interface RegisterContextType {
   nombre: string;
   apellido: string;
   rut: string;
-  fechaNacimiento: Date; // Cambiar a Date
+  fechaNacimiento: Date;
+  genero: string;
   telefono: string;
-  profileType: string; // Nuevo campo agregado
-  imageUrl: string; // Nuevo campo agregado
-  service: string; // Nuevo campo agregado
-  servicePrice: string; // Nuevo campo agregado
+  profileType: string; 
+  imageUrl: string; 
+  service: string; 
+  servicePrice: string; 
   setRegisterData: (data: Partial<RegisterContextType>) => void;
 }
 
@@ -25,12 +26,13 @@ export const RegisterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     nombre: "",
     apellido: "",
     rut: "",
-    fechaNacimiento: new Date(), // Inicializa como Date
+    fechaNacimiento: new Date(), 
     telefono: "",
-    profileType: "", // Inicializa el nuevo campo
-    imageUrl: "", // Inicializa el nuevo campo
-    service: "", // Inicializa el nuevo campo
-    servicePrice: "", // Inicializa el nuevo campo
+    profileType: "", 
+    imageUrl: "", 
+    service: "", 
+    servicePrice: "", 
+    genero: "",
   });
 
   const updateRegisterData = (data: Partial<RegisterContextType>) => {

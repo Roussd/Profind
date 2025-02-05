@@ -70,7 +70,6 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert('Inicio de sesión exitoso', `Bienvenido, ${userCredential.user.email}`);
       setUser(userCredential.user);
       checkProfileCompletion(userCredential.user.uid);
     } catch (error) {
