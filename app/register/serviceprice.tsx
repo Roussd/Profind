@@ -8,12 +8,18 @@ import { useRegisterContext } from '../../context/userRegisterContext'; // Impor
 
 const ServicePricingScreen = () => {
   const router = useRouter();
-  const { nombre, apellido, rut, fechaNacimiento, telefono, profileType, imageUrl, service, setRegisterData } = useRegisterContext(); // Usar el hook directamente
+  const { nombre, apellido, rut, fechaNacimiento, telefono, genero, profileType, imageUrl, service, setRegisterData } = useRegisterContext(); 
   const [price, setPrice] = useState('');
 
   const handleContinue = async () => {
     if (!price) {
       Alert.alert('Error', 'Por favor, ingrese el precio del servicio.');
+      return;
+    }
+
+    const priceRegex = /^[0-9]+$/;
+    if (!priceRegex.test(price)) {
+      Alert.alert('Error', 'El precio solo debe contener números.');
       return;
     }
 
@@ -34,11 +40,10 @@ const ServicePricingScreen = () => {
         telefono,
         profileType,
         imageUrl,
+        genero,
         service,
         servicePrice: price,
       });
-
-      Alert.alert('Éxito', 'Información registrada correctamente');
       router.push('/register/finishregister');
     } catch (error) {
       console.error('Error al registrar la información:', error);
@@ -58,17 +63,18 @@ const ServicePricingScreen = () => {
       <Image source={require('../../assets/images/money.png')} style={styles.image} />
 
       {/* Input Precio */}
-      <TextInput
-        style={styles.input}
-        placeholder="$"
-        value={price}
-        onChangeText={setPrice}
-      />
-
-      {/* Botón Continuar */}
-      <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-        <Text style={styles.continueButtonText}>Continuar</Text>
-      </TouchableOpacity>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="$"
+          value={price}
+          onChangeText={setPrice}
+          keyboardType="numeric" // Asegura que solo se puedan ingresar números
+        />
+        <TouchableOpacity style={styles.iconButton} onPress={handleContinue}>
+          <Ionicons name="arrow-forward-outline" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -86,36 +92,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 24,
     paddingHorizontal: 15,
     paddingVertical: 12,
-    fontSize: 16,
     marginBottom: 20,
   },
-  continueButton: {
-    backgroundColor: '#4F46E5',
-    paddingVertical: 15,
-    borderRadius: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  continueButtonText: {
-    color: 'white',
+  input: {
+    flex: 1,
     fontSize: 16,
+  },
+  iconButton: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 24,
+    padding: 10,
+    marginLeft: 10,
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 1,
     backgroundColor: '#f0f0f0',

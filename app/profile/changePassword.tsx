@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 
 const ChangePasswordScreen = () => {
   const router = useRouter();
@@ -9,13 +11,60 @@ const ChangePasswordScreen = () => {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
-  const handleChangePassword = () => {
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Las nuevas contraseñas no coinciden")
-      return
+  const handleChangePassword = async () => {
+    try {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        Alert.alert("Error", "Todos los campos son obligatorios");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        Alert.alert("Error", "Las nuevas contraseñas no coinciden");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        Alert.alert("Error", "La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
+
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        Alert.alert("Error", "Usuario no autenticado");
+        return;
+      }
+
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      await updatePassword(user, newPassword);
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      
+      Alert.alert("Éxito", "Contraseña actualizada correctamente");
+      router.push('/profile');
+      
+    } catch (error: any) {
+      console.error("Error al cambiar contraseña:", error);
+      
+      let errorMessage = "Error al cambiar la contraseña";
+      switch (error.code) {
+        case "auth/wrong-password":
+          errorMessage = "Contraseña actual incorrecta";
+          break;
+        case "auth/requires-recent-login":
+          errorMessage = "La operación requiere autenticación reciente";
+          break;
+        case "auth/weak-password":
+          errorMessage = "La nueva contraseña es demasiado débil";
+          break;
+      }
+      
+      Alert.alert("Error", errorMessage);
     }
-    Alert.alert("Éxito", "Tu contraseña ha sido cambiada")
-  }
+  };
 
   return (
     <View style={styles.container}>

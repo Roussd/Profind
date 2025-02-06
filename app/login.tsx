@@ -70,7 +70,6 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert('Inicio de sesión exitoso', `Bienvenido, ${userCredential.user.email}`);
       setUser(userCredential.user);
       checkProfileCompletion(userCredential.user.uid);
     } catch (error) {
@@ -191,7 +190,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 1,
     backgroundColor: '#f0f0f0',

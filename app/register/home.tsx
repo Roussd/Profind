@@ -41,8 +41,6 @@ const RegisterHomeScreen = () => {
       await setDoc(userDocRef, {
         profileCompleted: false,
       });
-
-      Alert.alert('Éxito', 'Usuario registrado exitosamente.');
       router.push('/register/register');
     } catch (error: any) {
       // Manejo de errores
@@ -160,7 +158,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 1,
     backgroundColor: '#f0f0f0',

@@ -17,7 +17,7 @@ import { auth, firestore } from '../../config/firebase';
 
 const ProfileTypeScreen = () => {
   const router = useRouter();
-  const { nombre, apellido, rut, fechaNacimiento, telefono, setRegisterData } = useRegisterContext(); // Usar el hook directamente
+  const { nombre, apellido, rut, fechaNacimiento, telefono, genero, setRegisterData } = useRegisterContext(); // Usar el hook directamente
   const [selectedOption, setSelectedOption] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
@@ -55,6 +55,7 @@ const ProfileTypeScreen = () => {
           rut,
           fechaNacimiento,
           telefono,
+          genero,
           profileType: selectedOption,
         });
 
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 1,
     backgroundColor: '#f0f0f0',

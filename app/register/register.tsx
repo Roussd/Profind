@@ -11,6 +11,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
 import { checkRut, prettifyRut } from 'react-rut-formatter'; // Importa las funciones de react-rut-formatter
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; // Importar funciones de Firebase
+import BirthDatePicker from '../../components/birthDatePicker'; // Importar el componente BirthDatePicker
+import GenderPicker from '../../components/genderPicker'; // Importar el componente GenderPicker
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -18,17 +21,58 @@ const RegisterScreen = () => {
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [rut, setRut] = useState('');
-  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState(new Date());
   const [telefono, setTelefono] = useState('');
+  const [genero, setGenero] = useState('');
 
-  const handleContinue = () => {
-    if (!nombre || !apellido || !rut || !fechaNacimiento || !telefono) {
+  const checkRutInDatabase = async (rut) => {
+    const db = getFirestore();
+    const q = query(collection(db, 'users'), where('rut', '==', rut));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  };
+
+  const isAdult = (birthDate) => {
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      return age - 1 >= 18;
+    }
+    return age >= 18;
+  };
+
+  const handleContinue = async () => {
+    if (!nombre || !apellido || !rut || !fechaNacimiento || !telefono || !genero) {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
+      return;
+    }
+
+    const nameRegex = /^[a-zA-Z]+$/;
+    if (!nameRegex.test(nombre) || !nameRegex.test(apellido)) {
+      Alert.alert('Error', 'El nombre y apellido solo deben contener letras.');
+      return;
+    }
+
+    const phoneRegex = /^[0-9]+$/;
+    if (!phoneRegex.test(telefono)) {
+      Alert.alert('Error', 'El número de teléfono solo debe contener números.');
       return;
     }
 
     if (!checkRut(rut)) {
       Alert.alert('Error', 'RUT inválido. Por favor, ingresa un RUT válido.');
+      return;
+    }
+
+    if (!isAdult(fechaNacimiento)) {
+      Alert.alert('Error', 'Debes ser mayor de 18 años para registrarte.');
+      return;
+    }
+
+    const isRutRegistered = await checkRutInDatabase(rut);
+    if (isRutRegistered) {
+      Alert.alert('Error', 'El RUT ya está registrado.');
       return;
     }
 
@@ -39,6 +83,7 @@ const RegisterScreen = () => {
       rut: prettifyRut(rut),
       fechaNacimiento,
       telefono,
+      genero,
     });
 
     // Pasar a la pantalla de selección de servicios
@@ -76,35 +121,43 @@ const RegisterScreen = () => {
         onChangeText={setApellido}
       />
 
-      {/* Campo RUT */}
-      <Text style={styles.inputLabel}>RUT</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="12.345.678-9"
-        value={rut}
-        onChangeText={setRut}
-        onBlur={() => setRut(prettifyRut(rut))}
-        keyboardType="default"
-      />
+      {/* Contenedor para RUT y Teléfono */}
+      <View style={styles.row}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>RUT</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="12.345.678-9"
+            value={rut}
+            onChangeText={setRut}
+            onBlur={() => setRut(prettifyRut(rut))}
+            keyboardType="default"
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Teléfono</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="912345678"
+            value={telefono}
+            onChangeText={setTelefono}
+            keyboardType="phone-pad"
+          />
+        </View>
+      </View>
 
       {/* Campo Fecha de nacimiento */}
       <Text style={styles.inputLabel}>Fecha de nacimiento</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="12/12/2000"
-        value={fechaNacimiento}
-        onChangeText={setFechaNacimiento}
-        keyboardType="number-pad"
+      <BirthDatePicker
+        selectedDate={fechaNacimiento}
+        onSelect={setFechaNacimiento}
       />
 
-      {/* Campo Teléfono */}
-      <Text style={styles.inputLabel}>Teléfono</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="912345678"
-        value={telefono}
-        onChangeText={setTelefono}
-        keyboardType="phone-pad"
+      {/* Campo Género */}
+      <Text style={styles.inputLabel}>Género</Text>
+      <GenderPicker
+        selectedGender={genero}
+        onSelect={setGenero}
       />
 
       {/* Botón Continuar */}
@@ -125,7 +178,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 1,
     backgroundColor: '#f0f0f0',
@@ -136,6 +189,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginTop: -80,
     marginBottom: 10,
   },
   subtitle: {
@@ -143,6 +197,14 @@ const styles = StyleSheet.create({
     color: 'gray',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  inputContainer: {
+    flex: 1,
+    marginRight: 10,
   },
   inputLabel: {
     fontSize: 16,
