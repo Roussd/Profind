@@ -3,7 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import CountryPicker from '../../components/countryPicker';
+import NationalityPicker from '../../components/nationalityPicker'; 
 import BirthDatePicker from '../../components/birthDatePicker';
 import GenderPicker from '../../components/genderPicker';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -17,7 +17,7 @@ type UserProfile = {
   email: string;
   telefono: string;
   birthDate?: string;
-  country?: string;
+  nacionalidad?: string; 
   gender?: string;
 };
 
@@ -31,7 +31,7 @@ const EditProfileScreen = () => {
     email: '',
     telefono: '',
     birthDate: '',
-    country: '',
+    nacionalidad: '',
     gender: '',
   });
 
@@ -61,7 +61,7 @@ const EditProfileScreen = () => {
             fechaNacimiento: userData.fechaNacimiento || '',
             telefono: userData.telefono || '',
             birthDate: userData.birthDate || '',
-            country: userData.country || '',
+            nacionalidad: userData.nacionalidad || '',
             gender: userData.gender || '',
             email: auth.currentUser?.email || userData.email || '',
           });
@@ -75,8 +75,7 @@ const EditProfileScreen = () => {
     };
   
     fetchUserData();
-  }, []);  
-
+  }, []);
 
   const validateForm = () => {
     if (!form.nombre || !form.apellido || !form.email || !form.telefono) {
@@ -119,8 +118,6 @@ const EditProfileScreen = () => {
       Alert.alert('Error', 'No se pudieron guardar los datos.');
     }
   };
-
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -183,10 +180,10 @@ const EditProfileScreen = () => {
         </View>
         <View style={styles.row}>
           <View style={[styles.inputContainer, styles.halfWidth]}>
-            <Text style={styles.label}>País</Text>
-            <CountryPicker
-              selectedCountry={form.country}
-              onSelect={(country) => handleInputChange('country', country)}
+            <Text style={styles.label}>Nacionalidad</Text>
+            <NationalityPicker
+              selectedNationality={form.nacionalidad}
+              onSelect={(nationality) => handleInputChange('nacionalidad', nationality)}
             />
           </View>
           <View style={[styles.inputContainer, styles.halfWidth]}>
