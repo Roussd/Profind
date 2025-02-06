@@ -3,26 +3,54 @@ import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
-const BottomNavigation = ({ onRatingPress }) => {
+
+interface BottomNavigationProps {
+  onRatingPress?: () => void;
+}
+
+const BottomNavigation: React.FC<BottomNavigationProps> = ({ onRatingPress }) => {
   const router = useRouter();
+
+  const handleRatingPress = () => {
+    if (onRatingPress) {
+      onRatingPress();
+    }
+  };
+
   return (
     <View style={styles.navigation}>
-      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/homepage')}>
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => router.push('/homepage')}
+      >
         <FontAwesome5 name="home" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Inicio</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.navItem}>
+
+      <TouchableOpacity style={styles.navItem} onPress={handleRatingPress}>
         <FontAwesome5 name="heart" size={24} color="#E63946" />
         <Text style={styles.navText}>Favoritos</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.navItem, styles.navItemCenter]} onPress={() => router.push('/location/savedLocations')}>
+
+      <TouchableOpacity
+        style={[styles.navItem, styles.navItemCenter]}
+        onPress={() => router.push('/location/savedLocations')}
+      >
         <FontAwesome5 name="search" size={28} color="#FFF" />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/professional/dashboard')}>
+
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => router.push('/professional/dashboard')}
+      >
         <MaterialIcons name="message" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Pedidos</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
+
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => router.push('/profile')}
+      >
         <FontAwesome5 name="user" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Perfil</Text>
       </TouchableOpacity>
