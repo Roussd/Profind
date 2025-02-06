@@ -5,7 +5,7 @@ ProFind es una aplicación móvil diseñada para conectar a usuarios con profesi
 ## Características principales
 
 - **Búsqueda de profesionales cercanos**: Utiliza el GPS para mostrar profesionales disponibles dentro del área del usuario.
-- **Gestín de perfiles**: Tanto los usuarios como los profesionales pueden crear y personalizar sus perfiles.
+- **Gestión de perfiles**: Tanto los usuarios como los profesionales pueden crear y personalizar sus perfiles.
 - **Sistema de calificación y comentarios**: Permite a los usuarios calificar y dejar opiniones sobre los servicios recibidos.
 - **Sistema de membresía**: Incluye opciones de pago para acceder a funcionalidades premium.
 - **Interfaz intuitiva**: Diseñada para facilitar una experiencia de usuario fluida y amigable.
