@@ -10,12 +10,18 @@ interface BirthDatePickerProps {
 
 const BirthDatePicker: React.FC<BirthDatePickerProps> = ({ selectedDate, onSelect }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(selectedDate);
 
   const handleDateChange = (event: any, date?: Date) => {
-    if (event.type === 'set' && date) {
-      onSelect(date);
+    if (date) {
+      setTempDate(date);
     }
-    setShowDatePicker(false);
+    if (Platform.OS === 'android') {
+      if (event.type === 'set' && date) {
+        onSelect(date);
+      }
+      setShowDatePicker(false);
+    }
   };
 
   const formatDate = (date: Date): string => {
@@ -25,11 +31,19 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({ selectedDate, onSelec
     return `${day}/${month}/${year}`;
   };
 
+  const handleConfirm = () => {
+    onSelect(tempDate);
+    setShowDatePicker(false);
+  };
+
   return (
     <View>
       <TouchableOpacity
         style={styles.input}
-        onPress={() => setShowDatePicker(true)}
+        onPress={() => {
+          setTempDate(selectedDate);
+          setShowDatePicker(true);
+        }}
       >
         <Text style={styles.selectedText}>
           {selectedDate ? formatDate(selectedDate) : 'Selecciona tu fecha'}
@@ -37,7 +51,7 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({ selectedDate, onSelec
         <Ionicons name="calendar-outline" size={24} color="#4F46E5" />
       </TouchableOpacity>
 
-      {showDatePicker && (
+      {showDatePicker && Platform.OS === 'ios' && (
         <Modal
           transparent={true}
           animationType="fade"
@@ -47,23 +61,41 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({ selectedDate, onSelec
           <View style={styles.modalContainer}>
             <View style={styles.pickerContainer}>
               <DateTimePicker
-                value={selectedDate}
+                value={tempDate}
                 mode="date"
                 display="spinner"
-                textColor={Platform.OS === 'ios' ? '#333' : undefined}
+                textColor="#333"
                 onChange={handleDateChange}
-                maximumDate={new Date()} 
-                minimumDate={new Date(new Date().getFullYear() - 120, 0, 1)} 
+                maximumDate={new Date()}
+                minimumDate={new Date(new Date().getFullYear() - 120, 0, 1)}
+                style={styles.datePicker}
               />
               <TouchableOpacity
                 style={styles.confirmButton}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, { backgroundColor: '#ccc', marginTop: 8 }]}
                 onPress={() => setShowDatePicker(false)}
               >
-                <Text style={styles.confirmButtonText}>Cerrar</Text>
+                <Text style={[styles.confirmButtonText, { color: '#333' }]}>Cancelar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
+      )}
+
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="spinner"
+          onChange={handleDateChange}
+          maximumDate={new Date()}
+          minimumDate={new Date(new Date().getFullYear() - 120, 0, 1)}
+        />
       )}
     </View>
   );
@@ -114,6 +146,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  datePicker: {
+    width: '100%',
   },
 });
 

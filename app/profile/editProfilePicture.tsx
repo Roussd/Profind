@@ -6,7 +6,6 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth } from '../../config/firebase';
 import { useRouter } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
-import * as FileSystem from 'expo-file-system';
 
 const EditProfilePicture = () => {
   const router = useRouter();
@@ -50,25 +49,19 @@ const EditProfilePicture = () => {
     setUploading(true);
     
     try {
-      const { uri } = await FileSystem.getInfoAsync(image);
-      const fileContent = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const response = await fetch(image);
+      const blob = await response.blob();
       
-      const buffer = Buffer.from(fileContent, 'base64');
-      const uint8Array = new Uint8Array(buffer);
-
-      const storageRef = ref(storage, `profilepicture/${auth.currentUser.uid}`);
-      await uploadBytes(storageRef, uint8Array, {
+      const storageRef = ref(storage, `users/${auth.currentUser.uid}/profilepicture/${auth.currentUser.uid}.jpg`);
+      await uploadBytes(storageRef, blob, {
         contentType: 'image/jpeg',
       });
-
 
       const downloadURL = await getDownloadURL(storageRef);
 
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
-          photoURL: downloadURL
+          photoURL: downloadURL,
         });
       }
 
