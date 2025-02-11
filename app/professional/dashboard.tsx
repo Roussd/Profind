@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { auth, firestore } from "../../config/firebase";
 import BackButton from "../../components/backButton";
+import ClientRequest from "../../components/request/clientRequest";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 
 interface Request {
@@ -35,6 +36,7 @@ interface Request {
 
 const ProfessionalDashboard = () => {
   const [requests, setRequests] = useState<Request[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [professionalLocation, setProfessionalLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -147,6 +149,11 @@ const ProfessionalDashboard = () => {
       const requestRef = doc(firestore, "solicitudes", requestId);
       await updateDoc(requestRef, { estado: newStatus });
       
+      if (newStatus === "aceptada") {
+        const selected = requests.find(req => req.id === requestId);
+        setSelectedRequest(selected || null);
+      }
+  
       setRequests(prev => 
         prev.map(req => 
           req.id === requestId ? { ...req, estado: newStatus } : req
@@ -157,7 +164,7 @@ const ProfessionalDashboard = () => {
       alert("Error al actualizar el estado");
     }
   };
-
+    
   const renderItem = ({ item }: { item: Request }) => {
     let distance = "Distancia no disponible";
     
@@ -220,6 +227,8 @@ const ProfessionalDashboard = () => {
           </View>
         )}
       </View>
+
+      
     );
   };
 
@@ -245,6 +254,15 @@ const ProfessionalDashboard = () => {
         }
         contentContainerStyle={styles.listContent}
       />
+      {selectedRequest && selectedRequest.clienteLocation && (
+        <ClientRequest
+          visible={!!selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          professionalLocation={professionalLocation!}
+          clientLocation={selectedRequest.clienteLocation}
+          requestId={selectedRequest.id}
+        />
+      )}
     </View>
   );
 };
