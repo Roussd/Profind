@@ -54,6 +54,8 @@ const UsersScreen = () => {
   const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 1000]); // Rango de precios
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState<string>('service');
+
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -349,7 +351,7 @@ const UsersScreen = () => {
   return (
     <View style={styles.container}>
       <BackButton />
-      <Text style={styles.header}>Profesionales</Text>
+      <Text style={styles.header}>Profesionales en su area</Text>
 
       {/* Chips de filtros activos */}
       <View style={styles.activeFiltersContainer}>
@@ -381,84 +383,102 @@ const UsersScreen = () => {
         )}
       </View>
 
-      {/* Filtros mejorados */}
-      <View style={styles.filtersContainer}>
-        {/* Filtro de Servicio */}
-        <View style={styles.filterCard}>
-          <View style={styles.filterHeader}>
-            <MaterialIcons name="category" size={16} color="#6D28D9" />
-            <Text style={styles.filterLabel}>Servicio</Text>
-          </View>
-          <View style={styles.selectContainer}>
-            <Picker
-              selectedValue={selectedServices[0] || ""}
-              onValueChange={(itemValue) =>
-                setSelectedServices(itemValue ? [itemValue] : [])
-              }
-              dropdownIconColor="#6D28D9"
-            >
-              <Picker.Item label="Selecciona un servicio" value="" />
-              {services.map((service) => (
-                <Picker.Item
-                  key={service.id}
-                  label={service.name}
-                  value={service.name}
-                />
-              ))}
-            </Picker>
-          </View>
-        </View>
+      <Text style={styles.textfilter}>Mas filtross</Text>
 
-        {/* Filtro de Distancia */}
-        <View style={styles.filterCard}>
-          <View style={styles.filterHeader}>
-            <MaterialIcons name="location-on" size={16} color="#6D28D9" />
-            <Text style={styles.filterLabel}>Distancia máxima</Text>
-            <Text style={styles.filterValue}>{selectedDistance} km</Text>
-          </View>
-          <Slider
-            minimumValue={0}
-            maximumValue={100}
-            step={10}
-            value={selectedDistance}
-            onValueChange={setSelectedDistance}
-            minimumTrackTintColor="#6D28D9"
-            maximumTrackTintColor="#E5E7EB"
-            thumbTintColor="#6D28D9"
-          />
-        </View>
+      <View style={styles.filterSelectorContainer}>
+        <Picker
+          selectedValue={selectedFilter}
+          onValueChange={(itemValue) => setSelectedFilter(itemValue)}
+          style={styles.filterPicker}
+          dropdownIconColor="#6D28D9"
+        >
+          <Picker.Item label="Servicio" value="service" />
+          <Picker.Item label="Distancia" value="distance" />
+          <Picker.Item label="Precio" value="price" />
+        </Picker>
+      </View>
 
-        {/* Filtro de Precio */}
-        <View style={styles.filterCard}>
-          <View style={styles.filterHeader}>
-            <MaterialIcons name="attach-money" size={16} color="#6D28D9" />
-            <Text style={styles.filterLabel}>Rango de precios</Text>
-            <Text style={styles.filterValue}>
-              ${selectedPriceRange[0]} - ${selectedPriceRange[1]}
-            </Text>
+      {/* Contenedor de filtros dinámicos */}
+      <View style={styles.dynamicFiltersContainer}>
+        {selectedFilter === 'service' && (
+          <View style={styles.filterCard}>
+            <View style={styles.filterHeader}>
+              <MaterialIcons name="category" size={16} color="#6D28D9" />
+              <Text style={styles.filterLabel}>Servicio</Text>
+            </View>
+            <View style={styles.selectContainer}>
+              <Picker
+                selectedValue={selectedServices[0] || ""}
+                onValueChange={(itemValue) =>
+                  setSelectedServices(itemValue ? [itemValue] : [])
+                }
+                dropdownIconColor="#6D28D9"
+              >
+                <Picker.Item label="Selecciona un servicio" value="" />
+                {services.map((service) => (
+                  <Picker.Item
+                    key={service.id}
+                    label={service.name}
+                    value={service.name}
+                  />
+                ))}
+              </Picker>
+            </View>
           </View>
-          <MultiSlider
-            values={[selectedPriceRange[0], selectedPriceRange[1]]}
-            sliderLength={300}
-            onValuesChange={(values) => setSelectedPriceRange(values as [number, number])}
-            min={0}
-            max={1000}
-            step={10}
-            allowOverlap={false}
-            markerStyle={{
-              height: 24,
-              width: 24,
-              backgroundColor: '#6D28D9'
-            }}
-            selectedStyle={{
-              backgroundColor: '#6D28D9',
-            }}
-            trackStyle={{
-              backgroundColor: '#E5E7EB',
-              height: 4,
-            }}
-          />
-        </View>
+        )}
+
+        {selectedFilter === 'distance' && (
+          <View style={styles.filterCard}>
+            <View style={styles.filterHeader}>
+              <MaterialIcons name="location-on" size={16} color="#6D28D9" />
+              <Text style={styles.filterLabel}>Distancia máxima</Text>
+              <Text style={styles.filterValue}>{selectedDistance} km</Text>
+            </View>
+            <Slider
+              minimumValue={0}
+              maximumValue={100}
+              step={10}
+              value={selectedDistance}
+              onValueChange={setSelectedDistance}
+              minimumTrackTintColor="#6D28D9"
+              maximumTrackTintColor="#E5E7EB"
+              thumbTintColor="#6D28D9"
+            />
+          </View>
+        )}
+
+        {selectedFilter === 'price' && (
+          <View style={styles.filterCard}>
+            <View style={styles.filterHeader}>
+              <MaterialIcons name="attach-money" size={16} color="#6D28D9" />
+              <Text style={styles.filterLabel}>Rango de precios</Text>
+              <Text style={styles.filterValue}>
+                ${selectedPriceRange[0]} - ${selectedPriceRange[1]}
+              </Text>
+            </View>
+            <MultiSlider
+              values={[selectedPriceRange[0], selectedPriceRange[1]]}
+              sliderLength={300}
+              onValuesChange={(values) => setSelectedPriceRange(values as [number, number])}
+              min={0}
+              max={1000}
+              step={10}
+              allowOverlap={false}
+              markerStyle={{
+                height: 24,
+                width: 24,
+                backgroundColor: '#6D28D9'
+              }}
+              selectedStyle={{
+                backgroundColor: '#6D28D9',
+              }}
+              trackStyle={{
+                backgroundColor: '#E5E7EB',
+                height: 4,
+              }}
+            />
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -484,44 +504,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
     marginTop: 50,
-    color: "#333",
+    color: '#6D28D9',
   },
   filtersContainer: {
     marginBottom: 16,
-  },
-  filterCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginLeft: 8,
-  },
-  filterValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6D28D9',
-  },
-  selectContainer: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
   },
   activeFiltersContainer: {
     flexDirection: 'row',
@@ -541,10 +527,6 @@ const styles = StyleSheet.create({
   filterChipText: {
     color: '#6D28D9',
     fontSize: 12,
-  },
-  filterPicker: {
-    flex: 1,
-    marginRight: 8,
   },
   sliderContainer: {
     flex: 1,
@@ -615,6 +597,60 @@ const styles = StyleSheet.create({
   contractButtonText: {
     color: "white",
     fontWeight: "bold",
+  },
+  filterSelectorContainer: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  filterPicker: {
+    width: '100%',
+    backgroundColor: 'white',
+  },
+  dynamicFiltersContainer: {
+    minHeight: 120, // Altura mínima para mantener consistencia
+    marginBottom: 16,
+  },
+  filterCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginLeft: 8,
+  },
+  filterValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6D28D9',
+    marginLeft: 'auto',
+  },
+  selectContainer: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  textfilter: {
+    color: '#6D28D9',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
 });
 
