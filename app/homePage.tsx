@@ -16,8 +16,10 @@ import { FontAwesome5, Ionicons } from "@expo/vector-icons"
 import BottomNavigation from "components/bottomNavigation"
 import { LinearGradient } from "expo-linear-gradient"
 import AddRatingScreen from "../components/ratingscreen";
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get("window")
+
 
 const categories = [
   { id: "1", name: "Electricidad", icon: "bolt", color: "#4F46E5" },
@@ -64,6 +66,7 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false); 
+  const router = useRouter();
   const scrollY = new Animated.Value(0);
 
   const headerHeight = scrollY.interpolate({
@@ -102,7 +105,7 @@ export default function HomePage() {
         />
         <View style={styles.headerContent}>
           <Text style={styles.title}>ProFind</Text>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity onPress={() => router.push('/review')} style={styles.notificationButton}>
             <Ionicons name="notifications-outline" size={24} color="#FFF" />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
