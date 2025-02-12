@@ -14,6 +14,8 @@ import { doc, updateDoc } from "firebase/firestore";
 import { firestore, auth } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";
 import Geocoder from "react-native-geocoding";
+import worker from "../../assets/images/trabajador1.png";
+import client from "../../assets/images/cliente1.png";
 
 interface ClientRequestProps {
   visible: boolean;
@@ -172,12 +174,14 @@ const ClientRequest: React.FC<ClientRequestProps> = ({
             coordinate={professionalLocation}
             title="Tu ubicación"
             description={addresses.professional}
+            image={worker}
           />
           <Marker
             coordinate={clientLocation}
             title="Cliente"
             pinColor="#4F46E5"
             description={addresses.client}
+            image={client}
           />
           {routeCoordinates.length > 0 && (
             <Polyline
