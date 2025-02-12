@@ -21,7 +21,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ onRatingPress }) =>
     <View style={styles.navigation}>
       <TouchableOpacity
         style={styles.navItem}
-        onPress={() => router.push('/homepage')}
+        onPress={() => router.push('/homePage')}
       >
         <FontAwesome5 name="home" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Inicio</Text>
