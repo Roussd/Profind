@@ -226,6 +226,14 @@ const ProfessionalDashboard = () => {
             </TouchableOpacity>
           </View>
         )}
+        {item.estado === "aceptada" && (
+          <TouchableOpacity 
+          style={[styles.actionButton, styles.trackButton]}
+          onPress={() => setSelectedRequest(item)}
+        >
+          <Text style={styles.actionText}>seguimiento</Text>
+        </TouchableOpacity>
+        )}
       </View>
 
       
@@ -378,6 +386,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+  },
+  trackButton: {
+    backgroundColor: "#3B82F6",
+    marginTop: 12,
+    fontWeight: "500"
   },
 });
 
