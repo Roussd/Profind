@@ -3,7 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import NationalityPicker from '../../components/nationalityPicker'; 
+import NationalityPicker from '../../components/nationalityPicker';
 import BirthDatePicker from '../../components/birthDatePicker';
 import GenderPicker from '../../components/genderPicker';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -16,23 +16,23 @@ type UserProfile = {
   fechaNacimiento: string;
   email: string;
   telefono: string;
-  birthDate?: string;
-  nacionalidad?: string; 
-  gender?: string;
+  nacionalidad?: string;
+  genero?: string;
 };
+
 
 const EditProfileScreen = () => {
   const router = useRouter();
+
   const [form, setForm] = useState({
     nombre: '',
     apellido: '',
     rut: '',
-    fechaNacimiento: '',
     email: '',
     telefono: '',
-    birthDate: '',
+    fechaNacimiento: '',
     nacionalidad: '',
-    gender: '',
+    genero: '',
   });
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
@@ -46,23 +46,22 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No se pudo obtener la información del usuario.');
         return;
       }
-  
+
       try {
         const userDoc = doc(firestore, 'users', userId);
         const userSnap = await getDoc(userDoc);
-  
+
         if (userSnap.exists()) {
           const userData = userSnap.data() as UserProfile;
-  
+
           setForm({
             nombre: userData.nombre || '',
             apellido: userData.apellido || '',
             rut: userData.rut || '',
-            fechaNacimiento: userData.fechaNacimiento || '',
             telefono: userData.telefono || '',
-            birthDate: userData.birthDate || '',
+            fechaNacimiento: userData.fechaNacimiento || '',
             nacionalidad: userData.nacionalidad || '',
-            gender: userData.gender || '',
+            genero: userData.genero || '',
             email: auth.currentUser?.email || userData.email || '',
           });
         } else {
@@ -73,7 +72,7 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'Hubo un problema al cargar los datos del usuario.');
       }
     };
-  
+
     fetchUserData();
   }, []);
 
@@ -157,8 +156,8 @@ const EditProfileScreen = () => {
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Fecha de Nacimiento</Text>
           <BirthDatePicker
-            selectedDate={new Date(form.birthDate)}
-            onSelect={(date) => handleInputChange('birthDate', date.toISOString())}
+            selectedDate={new Date(form.fechaNacimiento)}
+            onSelect={(date) => handleInputChange('fechaNacimiento', date.toISOString())}
           />
         </View>
         <View style={styles.inputContainer}>
@@ -189,8 +188,8 @@ const EditProfileScreen = () => {
           <View style={[styles.inputContainer, styles.halfWidth]}>
             <Text style={styles.label}>Género</Text>
             <GenderPicker
-              selectedGender={form.gender}
-              onSelect={(gender) => handleInputChange('gender', gender)}
+              selectedGender={form.genero}
+              onSelect={(genero) => handleInputChange('genero', genero)}
             />
           </View>
         </View>
@@ -198,7 +197,7 @@ const EditProfileScreen = () => {
           <Text style={styles.saveButtonText}>GUARDAR</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaView >
   );
 };
 

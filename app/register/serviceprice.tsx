@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, updateDoc } from 'firebase/firestore'; // Importa updateDoc
-import { auth, firestore } from '../../config/firebase'; // Asegúrate de tener bien configurado tu Firestore y Auth
-import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, firestore } from '../../config/firebase';
+import { useRegisterContext } from '../../context/userRegisterContext';
 
 const ServicePricingScreen = () => {
   const router = useRouter();
@@ -24,13 +24,12 @@ const ServicePricingScreen = () => {
     }
 
     try {
-      const userId = auth.currentUser?.uid; // Obtén el ID del usuario autenticado
+      const userId = auth.currentUser?.uid;
       if (!userId) {
         Alert.alert('Error', 'No se pudo identificar al usuario.');
         return;
       }
 
-      // Actualizar la información en Firestore
       const userDocRef = doc(firestore, 'users', userId);
       await updateDoc(userDocRef, {
         nombre,
@@ -52,30 +51,37 @@ const ServicePricingScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Botón Back */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back-outline" size={24} color="black" />
-      </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          {/* Botón Back */}
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back-outline" size={24} color="black" />
+          </TouchableOpacity>
 
-      {/* Título */}
-      <Text style={styles.title}>¿Cuál es el precio del servicio a ofrecer?</Text>
-      <Image source={require('../../assets/images/money.png')} style={styles.image} />
+          {/* Título */}
+          <Text style={styles.title}>¿Cuál es el precio del servicio a ofrecer?</Text>
+          <Image source={require('../../assets/images/money.png')} style={styles.image} />
 
-      {/* Input Precio */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="$"
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric" // Asegura que solo se puedan ingresar números
-        />
-        <TouchableOpacity style={styles.iconButton} onPress={handleContinue}>
-          <Ionicons name="arrow-forward-outline" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-    </View>
+          {/* Input Precio */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="$"
+              value={price}
+              onChangeText={setPrice}
+              keyboardType="numeric"
+            />
+            <TouchableOpacity style={styles.iconButton} onPress={handleContinue}>
+              <Ionicons name="arrow-forward-outline" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
