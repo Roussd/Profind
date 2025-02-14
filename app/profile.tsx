@@ -182,7 +182,11 @@ const ProfileScreen = () => {
             text="Soporte"
             onPress={() => router.push('../profile/support')}
           />
-          <MenuItem icon="call-outline" text="Contacto" />
+          <MenuItem 
+            icon="call-outline" 
+            text="Contacto" 
+            onPress={() => router.push('../profile/contact')}
+          />
           <MenuItem
             icon="lock-closed-outline"
             text="Políticas de Privacidad"

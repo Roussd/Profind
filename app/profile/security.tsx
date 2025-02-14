@@ -1,118 +1,119 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from "@expo/vector-icons";
-import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { firestore, auth } from '../../config/firebase';
+"use client"
+
+import { useState } from "react"
+import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal, ScrollView } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
+import { useRouter } from "expo-router"
+import { Ionicons } from "@expo/vector-icons"
+import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "firebase/auth"
+import { doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { firestore, auth } from "../../config/firebase"
 
 const SecurityScreen = () => {
-  const router = useRouter();
-  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [isSuspendModalVisible, setSuspendModalVisible] = useState(false);
-  const [password, setPassword] = useState('');
+  const router = useRouter()
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [isSuspendModalVisible, setSuspendModalVisible] = useState(false)
+  const [password, setPassword] = useState("")
 
   const handleChangePassword = () => {
-    router.push('/profile/changePassword');
-  };
+    router.push("/profile/changePassword")
+  }
+
   const handleDeleteAccount = () => {
-    setDeleteModalVisible(true);
-  };
+    setDeleteModalVisible(true)
+  }
 
   const handleSuspendAccount = () => {
-    setSuspendModalVisible(true);
-  };
+    setSuspendModalVisible(true)
+  }
 
   const confirmDeleteAccount = async () => {
     try {
-      const user = auth.currentUser;
+      const user = auth.currentUser
       if (!user || !user.email) {
-        Alert.alert('Error', 'Usuario no autenticado.');
-        return;
+        Alert.alert("Error", "Usuario no autenticado.")
+        return
       }
 
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
+      const credential = EmailAuthProvider.credential(user.email, password)
+      await reauthenticateWithCredential(user, credential)
 
-      const userDoc = doc(firestore, 'users', user.uid);
-      await deleteDoc(userDoc);
+      const userDoc = doc(firestore, "users", user.uid)
+      await deleteDoc(userDoc)
 
-      await deleteUser(user);
+      await deleteUser(user)
 
-      Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente.');
-      setDeleteModalVisible(false);
-      setPassword('');
-      router.push('/login');
+      Alert.alert("Cuenta eliminada", "Tu cuenta ha sido eliminada permanentemente.")
+      setDeleteModalVisible(false)
+      setPassword("")
+      router.push("/login")
     } catch (error) {
-      console.error('Error al eliminar cuenta:', error);
-      Alert.alert('Error', 'No se pudo eliminar la cuenta. Verifica tu contraseña.');
-      setPassword('');
+      console.error("Error al eliminar cuenta:", error)
+      Alert.alert("Error", "No se pudo eliminar la cuenta. Verifica tu contraseña.")
+      setPassword("")
     }
-  };
+  }
 
   const confirmSuspendAccount = async () => {
     try {
-      const user = auth.currentUser;
+      const user = auth.currentUser
       if (!user || !user.email) {
-        Alert.alert('Error', 'Usuario no autenticado.');
-        return;
+        Alert.alert("Error", "Usuario no autenticado.")
+        return
       }
 
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
+      const credential = EmailAuthProvider.credential(user.email, password)
+      await reauthenticateWithCredential(user, credential)
 
-      const userDoc = doc(firestore, 'users', user.uid);
+      const userDoc = doc(firestore, "users", user.uid)
       await updateDoc(userDoc, {
         suspended: true,
         suspendedAt: new Date().toISOString(),
-      });
+      })
 
-      Alert.alert('Cuenta suspendida', 'Tu cuenta ha sido suspendida temporalmente.');
-      setSuspendModalVisible(false);
-      setPassword('');
-      await auth.signOut();
-      router.push('/login');
+      Alert.alert("Cuenta suspendida", "Tu cuenta ha sido suspendida temporalmente.")
+      setSuspendModalVisible(false)
+      setPassword("")
+      await auth.signOut()
+      router.push("/login")
     } catch (error) {
-      console.error('Error al suspender cuenta:', error);
-      Alert.alert('Error', 'No se pudo suspender la cuenta. Verifica tu contraseña.');
-      setPassword('');
+      console.error("Error al suspender cuenta:", error)
+      Alert.alert("Error", "No se pudo suspender la cuenta. Verifica tu contraseña.")
+      setPassword("")
     }
-  };
+  }
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.push('/profile')}
-      >
-        <View style={styles.backButtonContainer}>
-          <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
-        </View>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/profile")}>
+          <View style={styles.backButtonContainer}>
+            <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Seguridad</Text>
+      </View>
+      <ScrollView style={styles.content}>
+        <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
+          <Text style={styles.buttonText}>Cambiar Contraseña</Text>
+        </TouchableOpacity>
 
-      <Text style={styles.title}>Seguridad</Text>
+        <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={handleDeleteAccount}>
+          <Text style={[styles.buttonText, styles.dangerButtonText]}>Eliminar Cuenta</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.buttonlogin} onPress={handleChangePassword}>
-        <Text style={styles.buttonText}>Cambiar Contraseña</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={handleSuspendAccount}>
+          <Text style={[styles.buttonText, styles.dangerButtonText]}>Suspender Cuenta</Text>
+        </TouchableOpacity>
+      </ScrollView>
 
-      <TouchableOpacity style={styles.buttonregister} onPress={handleDeleteAccount}>
-        <Text style={styles.buttonTextRegister}>Eliminar Cuenta</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.buttonregister} onPress={handleSuspendAccount}>
-        <Text style={styles.buttonTextRegister}>Suspender Cuenta</Text>
-      </TouchableOpacity>
-
-      <Modal
-        visible={isDeleteModalVisible}
-        transparent={true}
-        animationType="slide"
-      >
+      <Modal visible={isDeleteModalVisible} transparent={true} animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>¿Estás seguro?</Text>
-            <Text style={styles.modalText}>Esta acción eliminará tu cuenta permanentemente. Por favor, ingresa tu contraseña para confirmar.</Text>
+            <Text style={styles.modalText}>
+              Esta acción eliminará tu cuenta permanentemente. Por favor, ingresa tu contraseña para confirmar.
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
@@ -120,28 +121,29 @@ const SecurityScreen = () => {
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity style={styles.buttonlogin} onPress={confirmDeleteAccount}>
+            <TouchableOpacity style={styles.button} onPress={confirmDeleteAccount}>
               <Text style={styles.buttonText}>Confirmar Eliminación</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonregister} onPress={() => {
-              setDeleteModalVisible(false);
-              setPassword('');
-            }}>
-              <Text style={styles.buttonTextRegister}>Cancelar</Text>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => {
+                setDeleteModalVisible(false)
+                setPassword("")
+              }}
+            >
+              <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={isSuspendModalVisible}
-        transparent={true}
-        animationType="slide"
-      >
+      <Modal visible={isSuspendModalVisible} transparent={true} animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>¿Estás seguro?</Text>
-            <Text style={styles.modalText}>Esta acción suspenderá tu cuenta temporalmente. Por favor, ingresa tu contraseña para confirmar.</Text>
+            <Text style={styles.modalText}>
+              Esta acción suspenderá tu cuenta temporalmente. Por favor, ingresa tu contraseña para confirmar.
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
@@ -149,70 +151,59 @@ const SecurityScreen = () => {
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity style={styles.buttonlogin} onPress={confirmSuspendAccount}>
+            <TouchableOpacity style={styles.button} onPress={confirmSuspendAccount}>
               <Text style={styles.buttonText}>Confirmar Suspensión</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonregister} onPress={() => {
-              setSuspendModalVisible(false);
-              setPassword('');
-            }}>
-              <Text style={styles.buttonTextRegister}>Cancelar</Text>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => {
+                setSuspendModalVisible(false)
+                setPassword("")
+              }}
+            >
+              <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
-  );
-};
+    </SafeAreaView>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F6F6F6",
+  },
+  header: {
+    backgroundColor: "#EDE9FE",
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingBottom: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 100,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#4F46E5',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  buttonlogin: {
-    backgroundColor: '#4F46E5',
-    width: 280,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 6,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#333",
   },
   backButton: {
-    position: 'absolute',
-    top: 40,
+    position: "absolute",
+    top: 20,
     left: 20,
     zIndex: 10,
   },
   backButtonContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 50,
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -221,69 +212,68 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-
-  buttonregister: {
-    backgroundColor: '#FFF',
-    width: 280,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e7e7e7',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 6,
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  button: {
+    backgroundColor: "#4F46E5",
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 16,
   },
   buttonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  buttonTextRegister: {
-    color: '#4e4e4e',
-    fontSize: 16,
+  dangerButton: {
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
+  dangerButtonText: {
+    color: "#EF4444",
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '80%',
+    borderRadius: 8,
+    width: "80%",
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4F46E5',
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 10,
   },
   modalText: {
-    fontSize: 16,
-    color: '#4e4e4e',
-    textAlign: 'center',
+    fontSize: 14,
+    color: "#666",
     marginBottom: 20,
   },
   input: {
-    width: '100%',
-    height: 40,
-    borderColor: '#e7e7e7',
-    borderWidth: 1,
+    backgroundColor: "#F6F6F6",
     borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 20,
+    padding: 12,
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 16,
   },
-});
+  cancelButton: {
+    backgroundColor: "#F6F6F6",
+  },
+  cancelButtonText: {
+    color: "#333",
+  },
+})
 
-export default SecurityScreen;
+export default SecurityScreen
+

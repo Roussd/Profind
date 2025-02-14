@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import {
   View,
   Text,
@@ -11,23 +11,36 @@ import {
   Animated,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from "react-native"
 import { FontAwesome5, Ionicons } from "@expo/vector-icons"
 import BottomNavigation from "components/bottomNavigation"
 import { LinearGradient } from "expo-linear-gradient"
-import AddRatingScreen from "../components/ratingscreen";
-import { useRouter } from 'expo-router';
+import AddRatingScreen from "../components/ratingscreen"
+import { collection, query, where, onSnapshot } from "firebase/firestore"
+import { firestore } from "../config/firebase"
+import { useRouter } from "expo-router"
 
 const { width } = Dimensions.get("window")
-
 
 const categories = [
   { id: "1", name: "Electricidad", icon: "bolt", color: "#4F46E5" },
   { id: "2", name: "Limpieza", icon: "broom", color: "#10B981" },
   { id: "3", name: "Jardinería", icon: "leaf", color: "#059669" },
-  { id: "4", name: "Plomería", icon: "faucet", color: "#2563EB" },
+  { id: "4", name: "Gasfitería", icon: "faucet", color: "#2563EB" },
   { id: "5", name: "Carpintería", icon: "hammer", color: "#D97706" },
+  { id: "6", name: "Más", icon: "ellipsis-h", color: "#6B7280" },
 ]
+
+
+const professionMapping: { [key: string]: string } = {
+  "carpitero": "Carpintería",
+  "gasfiter": "Gasfitería",
+  "electricista": "Electricidad",
+  "jardinero": "Jardinería",
+  "limpieza": "Limpieza",
+  "plomero": "Gasfitería",
+}
 
 interface Professional {
   id: string
@@ -40,40 +53,92 @@ interface Professional {
   image: string
 }
 
-const professionals = [
-  {
-    id: "1",
-    name: "Carlos Rodríguez",
-    profession: "Jardinería",
-    rating: 4.8,
-    reviews: 127,
-    price: "$25/hr",
-    available: true,
-  },
-  {
-    id: "2",
-    name: "Ana Martínez",
-    profession: "Limpieza",
-    rating: 4.9,
-    reviews: 89,
-    price: "$30/hr",
-    available: true,
-  },
-]
-
-
 export default function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isRatingModalVisible, setIsRatingModalVisible] = useState(false); 
-  const router = useRouter();
-  const scrollY = new Animated.Value(0);
+  const router = useRouter()
 
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isRatingModalVisible, setIsRatingModalVisible] = useState(false)
+  const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const scrollY = new Animated.Value(0)
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [120, 80],
     extrapolate: "clamp",
-  });
+  })
+
+
+  useEffect(() => {
+    const professionalsRef = collection(firestore, "users")
+    const q = query(professionalsRef, where("profileType", "in", ["1", "3"]))
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const profs = snapshot.docs.map((doc) => {
+        const data = doc.data()
+
+
+        const docService = data.service
+        const serviceString = typeof docService === "string" ? docService : ""
+
+        const services = serviceString
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+        const normalizedProfession =
+        services.length > 1
+          ? "Más"
+          : (services[0]
+              ? (professionMapping[services[0].toLowerCase()] || services[0])
+              : "")
+
+        return {
+          id: doc.id,
+          name: `${data.nombre || ""} ${data.apellido || ""}`.trim(),
+          profession: normalizedProfession, 
+          rating: data.rating || 0,
+          reviews: data.reviews || 0,
+          price: data.servicePrice ? `$${data.servicePrice}/hr` : "",
+          available: data.available || false,
+          image: data.image || "https://via.placeholder.com/60",
+        }
+      })
+      setProfessionals(profs)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+
+  const filteredProfessionals = useMemo(() => {
+    return professionals.filter((prof) => {
+      let matchesCategory = true
+      if (selectedCategory && typeof prof.profession === "string") {
+
+        const categoryObj = categories.find((c) => c.id === selectedCategory)
+
+        if (categoryObj) {
+          matchesCategory =
+            prof.profession.toLowerCase() === categoryObj.name.toLowerCase()
+        }
+      }
+
+      let matchesSearch = true
+      if (searchQuery) {
+        const queryLower = searchQuery.toLowerCase()
+        const nameLower = prof.name?.toLowerCase?.() || ""
+        const professionLower = prof.profession?.toLowerCase?.() || ""
+        matchesSearch =
+          nameLower.includes(queryLower) || professionLower.includes(queryLower)
+      }
+
+      return matchesCategory && matchesSearch
+    })
+  }, [professionals, searchQuery, selectedCategory])
+
 
   const renderProfessionalCard = ({ item }: { item: Professional }) => (
     <TouchableOpacity style={styles.professionalCard}>
@@ -94,6 +159,15 @@ export default function HomePage() {
     </TouchableOpacity>
   )
 
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    )
+  }
+
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.header, { height: headerHeight }]}>
@@ -105,7 +179,10 @@ export default function HomePage() {
         />
         <View style={styles.headerContent}>
           <Text style={styles.title}>ProFind</Text>
-          <TouchableOpacity onPress={() => router.push('/review')} style={styles.notificationButton}>
+          <TouchableOpacity
+            onPress={() => router.push("/review")}
+            style={styles.notificationButton}
+          >
             <Ionicons name="notifications-outline" size={24} color="#FFF" />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
@@ -114,11 +191,20 @@ export default function HomePage() {
 
       <ScrollView
         style={styles.content}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
         scrollEventThrottle={16}
       >
+
         <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#6B7280" style={styles.searchIcon} />
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color="#6B7280"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar servicios..."
@@ -128,15 +214,28 @@ export default function HomePage() {
           />
         </View>
 
+
         <View style={styles.bannerContainer}>
-          <Image source={require("../assets/images/work.png")} style={styles.banner} />
-          <LinearGradient colors={["transparent", "rgba(0,0,0,0.8)"]} style={styles.bannerOverlay}>
-            <Text style={styles.bannerTitle}>ENCUENTRA PROFESIONALES DE CONFIANZA</Text>
+          <Image
+            source={require("../assets/images/work.png")}
+            style={styles.banner}
+          />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.8)"]}
+            style={styles.bannerOverlay}
+          >
+            <Text style={styles.bannerTitle}>
+              ENCUENTRA PROFESIONALES DE CONFIANZA
+            </Text>
           </LinearGradient>
         </View>
 
         <Text style={styles.sectionTitle}>Categorías</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoriesContainer}
+        >
           {categories.map((category) => (
             <TouchableOpacity
               key={category.id}
@@ -145,7 +244,11 @@ export default function HomePage() {
                 { backgroundColor: category.color },
                 selectedCategory === category.id && styles.categorySelected,
               ]}
-              onPress={() => setSelectedCategory(category.id)}
+              onPress={() =>
+                setSelectedCategory(
+                  selectedCategory === category.id ? null : category.id
+                )
+              }
             >
               <FontAwesome5 name={category.icon} size={24} color="#FFF" />
               <Text style={styles.categoryName}>{category.name}</Text>
@@ -153,11 +256,12 @@ export default function HomePage() {
           ))}
         </ScrollView>
 
+
         <View style={styles.professionalsSection}>
           <Text style={styles.sectionTitle}>Profesionales Destacados</Text>
-          {professionals.length > 0 ? (
+          {filteredProfessionals.length > 0 ? (
             <FlatList
-              data={professionals}
+              data={filteredProfessionals}
               renderItem={renderProfessionalCard}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
@@ -165,28 +269,32 @@ export default function HomePage() {
           ) : (
             <View style={styles.noProfessionals}>
               <Ionicons name="alert-circle-outline" size={48} color="#6B7280" />
-              <Text style={styles.noProfessionalsTitle}>No hay profesionales disponibles</Text>
+              <Text style={styles.noProfessionalsTitle}>
+                No hay profesionales disponibles
+              </Text>
               <Text style={styles.noProfessionalsText}>
-                No encontramos profesionales en esta categoría por el momento
+                No encontramos profesionales en esta categoría o con esa búsqueda
+                por el momento
               </Text>
             </View>
           )}
         </View>
-        </ScrollView>
+      </ScrollView>
 
-<BottomNavigation onRatingPress={() => setIsRatingModalVisible(true)} />
+      <BottomNavigation onRatingPress={() => setIsRatingModalVisible(true)} />
 
-<Modal
-  animationType="slide"
-  transparent={true}
-  visible={isRatingModalVisible}
-  onRequestClose={() => setIsRatingModalVisible(false)}
->
-  <AddRatingScreen onClose={() => setIsRatingModalVisible(false)} />
-</Modal>
-</View>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isRatingModalVisible}
+        onRequestClose={() => setIsRatingModalVisible(false)}
+      >
+        <AddRatingScreen onClose={() => setIsRatingModalVisible(false)} />
+      </Modal>
+    </View>
   )
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -279,6 +387,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     padding: 12,
     justifyContent: "space-between",
+    alignItems: "center",
   },
   categorySelected: {
     transform: [{ scale: 1.05 }],
@@ -287,6 +396,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 14,
     fontWeight: "600",
+    textAlign: "center",
   },
   professionalsSection: {
     paddingBottom: 100,
@@ -386,5 +496,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 })
-
