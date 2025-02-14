@@ -10,11 +10,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const reviews = [
-  { id: 1, stars: 5, comment: 'Excelente servicio, muy profesional.', type: 'positive' },
-  { id: 2, stars: 4, comment: 'Muy buen trabajo, pero llegó un poco tarde.', type: 'positive' },
-  { id: 3, stars: 3, comment: 'El trabajo fue aceptable, pero podría mejorar.', type: 'neutral' },
-  { id: 4, stars: 2, comment: 'No quedé satisfecho con el servicio.', type: 'negative' },
-  { id: 5, stars: 1, comment: 'Jonathan Olivares quemo mi casa intentando cambiar una ampolleta.', type: 'negative' },
+  { id: 1, stars: 5, comment: 'Excelente servicio, muy profesional.', type: 'positive', date: '2023-10-01' },
+  { id: 2, stars: 4, comment: 'Muy buen trabajo, pero llegó un poco tarde.', type: 'positive', date: '2023-09-15' },
+  { id: 3, stars: 3, comment: 'El trabajo fue aceptable, pero podría mejorar.', type: 'neutral', date: '2023-08-20' },
+  { id: 4, stars: 2, comment: 'No quedé satisfecho con el servicio.', type: 'negative', date: '2023-07-10' },
+  { id: 5, stars: 1, comment: 'Jonathan Olivares quemo mi casa intentando cambiar una ampolleta.', type: 'negative', date: '2023-06-05' },
 ];
 
 const ReviewScreen = () => {
@@ -40,6 +40,7 @@ const ReviewScreen = () => {
     <View key={review.id} style={styles.reviewContainer}>
       <View style={styles.starsContainer}>{renderStars(review.stars)}</View>
       <Text style={styles.comment}>{review.comment}</Text>
+      <Text style={styles.date}>{review.date}</Text>
     </View>
   );
 
@@ -137,6 +138,11 @@ const styles = StyleSheet.create({
   comment: {
     fontSize: 16,
     color: '#333',
+  },
+  date: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
   },
 });
 
