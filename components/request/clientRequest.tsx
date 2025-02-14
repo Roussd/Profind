@@ -1,4 +1,3 @@
-// components/clientRequest.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -75,12 +74,26 @@ const ClientRequest: React.FC<ClientRequestProps> = ({
         `https://maps.googleapis.com/maps/api/directions/json?origin=${professionalLocation.latitude},${professionalLocation.longitude}&destination=${clientLocation.latitude},${clientLocation.longitude}&key=${API_KEY}`
       );
       const json = await response.json();
-      const points = json.routes[0]?.overview_polyline?.points;
-      if (points) {
-        setRouteCoordinates(decodePolyline(points));
+  
+      if (json.status === "REQUEST_DENIED") {
+        console.error("Error de autenticación:", json.error_message);
+        Alert.alert("Error", "La API de Google Directions no está configurada correctamente.");
+        return;
+      }
+  
+      if (json.routes && json.routes.length > 0) {
+        const points = json.routes[0].overview_polyline.points;
+        if (points) {
+          const decodedCoordinates = decodePolyline(points);
+          setRouteCoordinates(decodedCoordinates);
+        }
+      } else {
+        console.error("No se encontró una ruta válida:", json);
+        Alert.alert("Error", "No se pudo calcular la ruta. Verifica las ubicaciones.");
       }
     } catch (error) {
       console.error("Error fetching route:", error);
+      Alert.alert("Error", "No se pudo conectar con el servidor de Google.");
     }
   };
 
@@ -154,6 +167,12 @@ const ClientRequest: React.FC<ClientRequestProps> = ({
     }
   };
 
+  // Calcular región inicial para el mapa
+  const midLat = (professionalLocation.latitude + clientLocation.latitude) / 2;
+  const midLng = (professionalLocation.longitude + clientLocation.longitude) / 2;
+  const latDelta = Math.abs(professionalLocation.latitude - clientLocation.latitude) * 1.5;
+  const lngDelta = Math.abs(professionalLocation.longitude - clientLocation.longitude) * 1.5;
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <View style={styles.container}>
@@ -166,8 +185,8 @@ const ClientRequest: React.FC<ClientRequestProps> = ({
           initialRegion={{
             latitude: professionalLocation.latitude,
             longitude: professionalLocation.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
+            latitudeDelta: latDelta,
+            longitudeDelta: lngDelta,
           }}
         >
           <Marker
@@ -179,7 +198,6 @@ const ClientRequest: React.FC<ClientRequestProps> = ({
           <Marker
             coordinate={clientLocation}
             title="Cliente"
-            pinColor="#4F46E5"
             description={addresses.client}
             image={client}
           />

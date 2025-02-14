@@ -7,7 +7,7 @@ const BackButton = () => {
   const router = useRouter();
 
   return (
-    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+    <TouchableOpacity style={styles.backButton} onPress={() => router.push('/homePage')}>
       <Ionicons name="arrow-back" size={24} color="#4F46E5" />
     </TouchableOpacity>
   );
