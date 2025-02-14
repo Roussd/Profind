@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { collection, getDocs, query, where,writeBatch, doc, orderBy, onSnapshot   } from "firebase/firestore";
+import { collection, getDocs, query, where, writeBatch, doc, orderBy, onSnapshot, deleteDoc } from "firebase/firestore";
 import { auth, firestore } from "../../config/firebase";
 import Geocoder from "react-native-geocoding"; // Asegúrate de tener configurado Geocoder correctamente
 import BackButton from "../../components/backButton";
+import { MaterialIcons } from "@expo/vector-icons";
 
 export default function SavedLocations() {
   const router = useRouter();
@@ -31,26 +33,26 @@ export default function SavedLocations() {
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-  
+
     const locationsRef = collection(firestore, "locations");
     const q = query(
       locationsRef,
       where("userId", "==", user.uid),
       orderBy("selected", "desc")
     );
-  
+
     // Listener en tiempo real
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const locationsData = await Promise.all(
         snapshot.docs.map(async (doc) => {
           const data = doc.data();
           let address = data.address;
-  
+
           // Solo busca dirección si no existe y hay coordenadas
           if (!address && data.latitude && data.longitude) {
             address = await getAddressFromCoordinates(data.latitude, data.longitude);
           }
-  
+
           return {
             id: doc.id,
             label: data.label || "Sin etiqueta",
@@ -59,13 +61,44 @@ export default function SavedLocations() {
           };
         })
       );
-  
+
       setLocations(locationsData);
       setFilteredLocations(locationsData);
+      const activeLocation = locationsData.find((loc) => loc.selected);
+      if (activeLocation) {
+        setSelectedLocation(activeLocation);
+      }
     });
-  
-    return unsubscribe; // Limpia el listener al desmontar el componente
+
+    return unsubscribe;
   }, []);
+
+  const handleDeleteLocation = async (locationId: string) => {
+    Alert.alert(
+      "Eliminar ubicación",
+      "¿Estás seguro de que deseas eliminar esta ubicación?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel", 
+        },
+        {
+          text: "Eliminar",
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(firestore, "locations", locationId));
+              console.log("Ubicación eliminada", "La ubicación ha sido eliminada correctamente.");
+            } catch (error) {
+              console.error("Error al eliminar la ubicación:", error);
+              Alert.alert("Error", "No se pudo eliminar la ubicación.");
+            }
+          },
+          style: "destructive", 
+        },
+      ],
+      { cancelable: true } 
+    );
+  };
 
   const getAddressFromCoordinates = async (
     latitude: number,
@@ -163,7 +196,6 @@ export default function SavedLocations() {
       // 6. Actualizar el estado local y UI
       setSelectedLocation(null);
 
-      alert(`Ubicación "${selectedLocation.label}" activada.`);
       router.push("professional/searchEmployee");
     } catch (error) {
       console.error("Error al seleccionar ubicación:", error);
@@ -175,8 +207,8 @@ export default function SavedLocations() {
     <TouchableOpacity
       style={[
         styles.locationItem,
-        item.selected && styles.selectedItem, // Selección persistente (Firestore)
-        selectedLocation?.id === item.id && { // Selección temporal (antes de confirmar)
+        item.selected && styles.selectedItem, 
+        selectedLocation?.id === item.id && { 
           borderColor: "#10B981",
           backgroundColor: "#D1FAE5"
         }
@@ -188,6 +220,12 @@ export default function SavedLocations() {
         <Text style={styles.activeBadge}>ACTIVA</Text>
       )}
       <Text style={styles.locationAddress}>{item.address}</Text>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => handleDeleteLocation(item.id)}
+      >
+        <MaterialIcons name="delete" size={24} color="#EF4444" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -231,11 +269,14 @@ export default function SavedLocations() {
 }
 
 const styles = StyleSheet.create({
-  // (Estilos permanecen iguales)
   container: {
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
+  },
+  deleteButton: {
+    marginLeft: 10,
+    left: 280,
   },
   headerText: {
     fontSize: 20,

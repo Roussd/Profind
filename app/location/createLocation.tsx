@@ -194,10 +194,7 @@ export class Map extends Component<Props> {
       await addDoc(collection(firestore, "locations"), locationData);
       this.props.router.push("/location/savedLocations");
 
-      Alert.alert(
-        "Ubicación guardada",
-        `La ubicación fue guardada exitosamente. Como (${saveAs}).`
-      );
+      console.log(`ubicacion guardada como: ${saveAs}`)
     } catch (error) {
       console.error("Error al guardar la ubicación:", error);
       Alert.alert(
@@ -372,7 +369,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: "#000",
+    shadowColor: "#",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
