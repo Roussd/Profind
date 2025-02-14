@@ -37,7 +37,8 @@ interface User {
   service: string;
   selectedLocation?: Location;
   solicitudEnviada?: boolean;
-  price?: number; // Nuevo campo para el precio
+  price?: number;
+  servicePrice?: string;
 }
 
 interface Service {
@@ -51,7 +52,7 @@ const UsersScreen = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedDistance, setSelectedDistance] = useState<number>(50); // Distancia en km
-  const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 1000]); // Rango de precios
+  const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 100000]); 
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<string>('service');
@@ -135,7 +136,8 @@ const UsersScreen = () => {
                 ? { latitude: location.latitude, longitude: location.longitude }
                 : undefined,
               solicitudEnviada: tieneSolicitud,
-              price: userData.price || 0, // Asignar un valor por defecto si no existe
+              price: userData.price || 0,
+              servicePrice: userData.servicePrice || "Precio no disponible",
             };
           })
         ).then((results) => results.filter(Boolean));
@@ -317,6 +319,7 @@ const UsersScreen = () => {
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{item.nombre}</Text>
           <Text style={styles.userService}>{item.service}</Text>
+          <Text style={styles.priceText}>Precio: ${item.servicePrice}</Text>
         </View>
         <View style={styles.extraInfo}>
           <Text style={styles.ratingText}>4.5</Text>
@@ -371,12 +374,12 @@ const UsersScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-        {(selectedPriceRange[0] > 0 || selectedPriceRange[1] < 1000) && (
+        {(selectedPriceRange[0] > 0 || selectedPriceRange[1] < 100000) && (
           <View style={styles.filterChip}>
             <Text style={styles.filterChipText}>
               ${selectedPriceRange[0]}-${selectedPriceRange[1]}
             </Text>
-            <TouchableOpacity onPress={() => setSelectedPriceRange([0, 1000])}>
+            <TouchableOpacity onPress={() => setSelectedPriceRange([0, 100000])}>
               <MaterialIcons name="close" size={16} color="#6D28D9" />
             </TouchableOpacity>
           </View>
@@ -461,7 +464,7 @@ const UsersScreen = () => {
               sliderLength={300}
               onValuesChange={(values) => setSelectedPriceRange(values as [number, number])}
               min={0}
-              max={1000}
+              max={100000}
               step={10}
               allowOverlap={false}
               markerStyle={{
@@ -498,6 +501,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: "#f5f5f5",
+  },
+  priceText: {
+    fontSize: 14,
+    color: "#6D28D9",
+    fontWeight: "bold",
   },
   header: {
     fontSize: 22,
