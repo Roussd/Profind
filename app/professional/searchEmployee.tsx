@@ -24,6 +24,7 @@ import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import Slider from "@react-native-community/slider";
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
+import { useRouter } from "expo-router";
 
 interface Location {
   latitude: number;
@@ -48,6 +49,7 @@ interface Service {
 
 const UsersScreen = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const Router = useRouter();
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -57,6 +59,10 @@ const UsersScreen = () => {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<string>('service');
 
+
+  const handleRating = () => {
+    Router.push('/review');
+  }
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -322,8 +328,10 @@ const UsersScreen = () => {
           <Text style={styles.priceText}>Precio: ${item.servicePrice}</Text>
         </View>
         <View style={styles.extraInfo}>
+          <TouchableOpacity style={styles.extraInfo} onPress={handleRating}>
           <Text style={styles.ratingText}>4.5</Text>
           <FontAwesome name="star" size={14} color="#6D28D9" />
+          </TouchableOpacity>
           <Text style={styles.distanceText}>{distance}</Text>
           <Ionicons name="location-outline" size={14} color="#6D28D9" />
           <TouchableOpacity

@@ -1,25 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  StyleSheet, 
-  ActivityIndicator, 
-  TouchableOpacity 
-} from "react-native";
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  updateDoc, 
-  orderBy, 
-  doc 
-} from "firebase/firestore";
-import { auth, firestore } from "../../config/firebase";
-import BackButton from "../../components/backButton";
-import ClientRequest from "../../components/request/clientRequest";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
+import { collection, query, where, getDocs, updateDoc, orderBy, doc, getDoc } from 'firebase/firestore';
+import { auth, firestore } from '../../config/firebase';
+import BackButton from '../../components/backButton';
+import ClientRequest from '../../components/request/clientRequest';
+import { useRouter } from 'expo-router';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import RatingModal from '../../components/ratingscreen'; // Asegúrate de importar el modal
 
 interface Request {
   id: string;
@@ -27,11 +21,12 @@ interface Request {
   clienteNombre: string;
   servicio: string;
   fecha: string;
-  estado: "pendiente" | "aceptada" | "rechazada" | "completada";
+  estado: 'pendiente' | 'aceptada' | 'rechazada' | 'completada';
   clienteLocation?: {
     latitude: number;
     longitude: number;
   };
+  rated?: boolean; // Nuevo campo
 }
 
 const ProfessionalDashboard = () => {
@@ -42,6 +37,17 @@ const ProfessionalDashboard = () => {
     longitude: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
+  const [ratingModalData, setRatingModalData] = useState<{
+    professionalId: string;
+    professionalName: string;
+    clientId: string;
+    clientName: string;
+    service: string;
+    requestId: string; // Añadir este campo
+  } | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,53 +56,50 @@ const ProfessionalDashboard = () => {
 
       try {
         // Obtener ubicación del profesional
-        const locationsRef = collection(firestore, "locations");
-        const q = query(
-          locationsRef,
-          where("userId", "==", user.uid),
-          where("selected", "==", true)
-        );
-        
+        const locationsRef = collection(firestore, 'locations');
+        const q = query(locationsRef, where('userId', '==', user.uid), where('selected', '==', true));
+
         const locationSnapshot = await getDocs(q);
         if (!locationSnapshot.empty) {
           const locationData = locationSnapshot.docs[0].data();
           setProfessionalLocation({
             latitude: locationData.latitude,
-            longitude: locationData.longitude
+            longitude: locationData.longitude,
           });
         }
 
+        // Obtener nombre del profesional desde Firestore
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+        const userData = userDoc.data();
+
         // Obtener solicitudes
         const requestsQuery = query(
-          collection(firestore, "solicitudes"),
-          where("profesionalId", "==", user.uid),
-          orderBy("fecha", "desc")
+          collection(firestore, 'solicitudes'),
+          where('profesionalId', '==', user.uid),
+          orderBy('fecha', 'desc')
         );
 
         const snapshot = await getDocs(requestsQuery);
-        
         const requestsData = await Promise.all(
           snapshot.docs.map(async (doc) => {
             const data = doc.data();
+            const fecha = data.fecha?.toDate?.() || new Date(data.fecha);
 
-             // Manejo seguro de fechas
-          const fecha = data.fecha?.toDate?.() || new Date(data.fecha);
-            
             // Obtener ubicación del cliente
             const clientLocationQuery = query(
-              collection(firestore, "locations"),
-              where("userId", "==", data.clienteId),
-              where("selected", "==", true)
+              collection(firestore, 'locations'),
+              where('userId', '==', data.clienteId),
+              where('selected', '==', true)
             );
-            
+
             const clientLocationSnapshot = await getDocs(clientLocationQuery);
             let clienteLocation = undefined;
-            
+
             if (!clientLocationSnapshot.empty) {
               const locationData = clientLocationSnapshot.docs[0].data();
               clienteLocation = {
                 latitude: locationData.latitude,
-                longitude: locationData.longitude
+                longitude: locationData.longitude,
               };
             }
 
@@ -107,14 +110,15 @@ const ProfessionalDashboard = () => {
               servicio: data.servicio,
               fecha: fecha.toISOString(),
               estado: data.estado,
-              clienteLocation
+              clienteLocation,
+              rated: data.rated || false, // Agregar campo rated
             };
           })
         );
 
         setRequests(requestsData);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
@@ -164,7 +168,19 @@ const ProfessionalDashboard = () => {
       alert("Error al actualizar el estado");
     }
   };
-    
+
+  const handleOpenRating = (request: Request) => {
+    setRatingModalData({
+      professionalId: auth.currentUser?.uid || '',
+      professionalName: auth.currentUser?.displayName || 'Profesional', // Valor por defecto
+      clientId: request.clienteId,
+      clientName: request.clienteNombre,
+      service: request.servicio,
+      requestId: request.id // Pasar el ID real de la solicitud
+    });
+    setIsRatingModalVisible(true);
+  };
+
   const renderItem = ({ item }: { item: Request }) => {
     let distance = "Distancia no disponible";
     
@@ -203,7 +219,8 @@ const ProfessionalDashboard = () => {
             styles.statusText,
             item.estado === "pendiente" && styles.pendingStatus,
             item.estado === "aceptada" && styles.acceptedStatus,
-            item.estado === "rechazada" && styles.rejectedStatus
+            item.estado === "rechazada" && styles.rejectedStatus,
+            item.estado === "completada" && styles.completedStatus
           ]}>
             {item.estado.toUpperCase()}
           </Text>
@@ -234,9 +251,22 @@ const ProfessionalDashboard = () => {
           <Text style={styles.actionText}>seguimiento</Text>
         </TouchableOpacity>
         )}
+        {item.estado === "completada" && (
+          <TouchableOpacity 
+          style={[
+            styles.actionButton, 
+            styles.reviewButton,
+            item.rated && styles.disabledButton // Estilo deshabilitado
+          ]}
+          onPress={() => !item.rated && handleOpenRating(item)}
+          disabled={item.rated}
+        >
+          <Text style={styles.actionText}>
+            {item.rated ? 'Valorado' : 'Valorar'}
+          </Text>
+        </TouchableOpacity>
+        )}
       </View>
-
-      
     );
   };
 
@@ -252,7 +282,7 @@ const ProfessionalDashboard = () => {
     <View style={styles.container}>
       <BackButton />
       <Text style={styles.header}>Solicitudes de Servicio</Text>
-      
+
       <FlatList
         data={requests}
         keyExtractor={(item) => item.id}
@@ -262,6 +292,7 @@ const ProfessionalDashboard = () => {
         }
         contentContainerStyle={styles.listContent}
       />
+
       {selectedRequest && selectedRequest.clienteLocation && (
         <ClientRequest
           visible={!!selectedRequest}
@@ -271,6 +302,24 @@ const ProfessionalDashboard = () => {
           requestId={selectedRequest.id}
         />
       )}
+
+      <RatingModal
+        visible={isRatingModalVisible}
+        onClose={() => {
+          setIsRatingModalVisible(false);
+          setRatingModalData(null);
+        }}
+        requestId={ratingModalData?.requestId} // Usar el campo correcto
+        professionalData={{
+          id: ratingModalData?.professionalId || '',
+          nombre: ratingModalData?.professionalName || '',
+        }}
+        clientData={{
+          id: ratingModalData?.clientId || '',
+          nombre: ratingModalData?.clientName || '',
+        }}
+        servicio={ratingModalData?.service || ''}
+      />
     </View>
   );
 };
@@ -351,6 +400,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEE2E2",
     color: "#B91C1C",
   },
+  completedStatus: {
+    backgroundColor: "#E0F2FE",
+    color: "#0369A1",
+  },
   actionsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -368,6 +421,16 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     backgroundColor: "#EF4444",
+  },
+  trackButton: {
+    backgroundColor: "#3B82F6",
+    marginTop: 12,
+    fontWeight: "500"
+  },
+  reviewButton: {
+    backgroundColor: "#10B981",
+    marginTop: 12,
+    fontWeight: "500"
   },
   actionText: {
     color: "white",
@@ -387,10 +450,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20,
   },
-  trackButton: {
-    backgroundColor: "#3B82F6",
-    marginTop: 12,
-    fontWeight: "500"
+  disabledButton: {
+    backgroundColor: '#94a3b8',
+    opacity: 0.7,
   },
 });
 
