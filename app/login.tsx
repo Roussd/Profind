@@ -24,6 +24,7 @@ const LoginScreen = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
+  const [passwordVisible, setPasswordVisible] = useState(false); // Estado para controlar la visibilidad de la contraseña
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -56,15 +57,9 @@ const LoginScreen = () => {
     }
   };
 
-  const handleLoginWithGoogle = () => {
-    console.log('Iniciar sesión con Google');
-    router.replace('/Ubicaciones/crearUbicacion'); 
-  };
-
-  const handleLoginWithFacebook = () => {
-    console.log('Iniciar sesión con Facebook');
-    router.replace('/profile');
-  };
+  const handleRegister = () => {
+    router.replace('/register/home');
+  } 
 
   const handleLogin = async () => {
     setLoading(true);
@@ -121,8 +116,11 @@ const LoginScreen = () => {
           placeholder="**********"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!passwordVisible} // Usar el estado para controlar la visibilidad
         />
+        <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+          <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="black" />
+        </TouchableOpacity>
       </View>
 
       {/* Recordarme */}
@@ -146,14 +144,11 @@ const LoginScreen = () => {
       {/* Enlaces adicionales */}
       <View style={styles.linksContainer}>
         <View style={styles.linkRow}>
-          <Text style={styles.link}>¿No tienes una cuenta aún? </Text>
-          <TouchableOpacity onPress={() => console.log('Registrarse')}>
+          <Text >¿No tienes una cuenta aún? </Text>
+          <TouchableOpacity onPress={handleRegister}>
             <Text style={styles.linkText}>Regístrate</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => console.log('Olvidé mi contraseña')}>
-          <Text style={styles.linkText}>Olvidé mi contraseña</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.separatorContainer}>
@@ -163,11 +158,11 @@ const LoginScreen = () => {
       </View>
 
       {/* Botones de inicio de sesión social */}
-      <TouchableOpacity style={styles.socialButton} onPress={handleLoginWithGoogle}>
+      <TouchableOpacity style={styles.socialButton}>
         <Ionicons name="logo-google" size={22} />
         <Text style={styles.socialButtonText}>Iniciar sesión con Google</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.socialButton]} onPress={handleLoginWithFacebook}>
+      <TouchableOpacity style={[styles.socialButton]}>
         <Ionicons name="logo-facebook" size={22} />
         <Text style={styles.socialButtonText}>Iniciar sesión con Facebook</Text>
       </TouchableOpacity>
