@@ -19,6 +19,7 @@ const RegisterHomeScreen = () => {
   const [password, setPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
+
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
@@ -115,13 +116,19 @@ const RegisterHomeScreen = () => {
         </TouchableOpacity>
         <Text style={styles.termsText}>
           Al continuar, acepta nuestro{' '}
-          <Text style={styles.linkText} onPress={() => console.log('Acuerdo de usuario')}>
+          <Text
+            style={styles.linkText}
+            onPress={() => router.push('/register/userAgreement')}
+          >
             Acuerdo de usuario
           </Text>{' '}
           y reconoce que comprende la{' '}
-          <Text style={styles.linkText} onPress={() => console.log('Política de privacidad')}>
+          <Text
+            style={styles.linkText}
+            onPress={() => router.push('/register/privacyPolicy')}
+          >
             Política de privacidad
-          </Text>.
+          </Text>
         </Text>
       </View>
 

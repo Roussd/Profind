@@ -95,6 +95,8 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({ selectedDate, onSelec
           onChange={handleDateChange}
           maximumDate={new Date()}
           minimumDate={new Date(new Date().getFullYear() - 120, 0, 1)}
+          style={styles.datePicker}
+          locale="es-ES"
         />
       )}
     </View>
