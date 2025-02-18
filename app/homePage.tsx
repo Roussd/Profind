@@ -20,6 +20,7 @@ import AddRatingScreen from "../components/ratingscreen"
 import { collection, query, where, onSnapshot } from "firebase/firestore"
 import { firestore } from "../config/firebase"
 import { useRouter } from "expo-router"
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
 
 const { width } = Dimensions.get("window")
 
@@ -53,6 +54,7 @@ interface Professional {
   image: string
 }
 
+
 export default function HomePage() {
   const router = useRouter()
 
@@ -71,46 +73,53 @@ export default function HomePage() {
 
 
   useEffect(() => {
-    const professionalsRef = collection(firestore, "users")
-    const q = query(professionalsRef, where("profileType", "in", ["1", "3"]))
+    const professionalsRef = collection(firestore, "users");
+    const q = query(professionalsRef, where("profileType", "in", ["1", "3"]));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const profs = snapshot.docs.map((doc) => {
-        const data = doc.data()
 
+      Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
 
-        const docService = data.service
-        const serviceString = typeof docService === "string" ? docService : ""
+          let imageUrl = "https://via.placeholder.com/60";
+          if (data.image) {
+            try {
+              imageUrl = await getDownloadURL(ref(getStorage(), data.image));
+            } catch (error) {
+              console.error("Error al obtener la imagen desde Storage:", error);
+            }
+          }
 
-        const services = serviceString
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
+          const docService = data.service;
+          const serviceString = typeof docService === "string" ? docService : "";
+          const services = serviceString.split(",").map((s) => s.trim()).filter(Boolean);
+          const normalizedProfession =
+            services.length > 1
+              ? "Más"
+              : (services[0]
+                  ? (professionMapping[services[0].toLowerCase()] || services[0])
+                  : "");
 
-        const normalizedProfession =
-        services.length > 1
-          ? "Más"
-          : (services[0]
-              ? (professionMapping[services[0].toLowerCase()] || services[0])
-              : "")
+          return {
+            id: doc.id,
+            name: `${data.nombre || ""} ${data.apellido || ""}`.trim(),
+            profession: normalizedProfession,
+            rating: data.rating || 0,
+            reviews: data.reviews || 0,
+            price: data.servicePrice ? `$${data.servicePrice}/hr` : "",
+            available: data.available || false,
+            image: imageUrl,
+          };
+        })
+      ).then((profs) => {
+        setProfessionals(profs);
+        setLoading(false);
+      });
+    });
 
-        return {
-          id: doc.id,
-          name: `${data.nombre || ""} ${data.apellido || ""}`.trim(),
-          profession: normalizedProfession, 
-          rating: data.rating || 0,
-          reviews: data.reviews || 0,
-          price: data.servicePrice ? `$${data.servicePrice}/hr` : "",
-          available: data.available || false,
-          image: data.image || "https://via.placeholder.com/60",
-        }
-      })
-      setProfessionals(profs)
-      setLoading(false)
-    })
-
-    return () => unsubscribe()
-  }, [])
+    return () => unsubscribe();
+  }, []);
 
 
   const filteredProfessionals = useMemo(() => {
@@ -289,8 +298,12 @@ export default function HomePage() {
         visible={isRatingModalVisible}
         onRequestClose={() => setIsRatingModalVisible(false)}
       >
-        <AddRatingScreen onClose={() => setIsRatingModalVisible(false)} />
+        <AddRatingScreen
+          visible={isRatingModalVisible}
+          onClose={() => setIsRatingModalVisible(false)}
+        />
       </Modal>
+
     </View>
   )
 }
