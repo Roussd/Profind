@@ -24,7 +24,7 @@ interface ClientRequestProps {
   requestId: string;
 }
 
-const API_KEY = process.env.EXPO_FIREBASE_API_KEY;
+const API_KEY = process.env.EXPO_CLOUD_API_KEY;
 Geocoder.init(API_KEY);
 
 const ClientRequest: React.FC<ClientRequestProps> = ({
