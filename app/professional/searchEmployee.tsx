@@ -60,10 +60,12 @@ const UsersScreen = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('service');
 
 
-  const handleRating = () => {
-    Router.push('/review');
-  }
-
+  const handleRating = (professionalId: string) => {
+    Router.push({
+      pathname: '/review',
+      params: { professionalId }, 
+    });
+  };
   useEffect(() => {
     const fetchServices = async () => {
       const servicesRef = collection(firestore, "services");
@@ -328,10 +330,13 @@ const UsersScreen = () => {
           <Text style={styles.priceText}>Precio: ${item.servicePrice}</Text>
         </View>
         <View style={styles.extraInfo}>
-          <TouchableOpacity style={styles.extraInfo} onPress={handleRating}>
-          <Text style={styles.ratingText}>4.5</Text>
-          <FontAwesome name="star" size={14} color="#6D28D9" />
-          </TouchableOpacity>
+        <TouchableOpacity 
+  style={styles.extraInfo} 
+  onPress={() => handleRating(item.id)} 
+>
+  <Text style={styles.ratingText}>4.5</Text>
+  <FontAwesome name="star" size={14} color="#6D28D9" />
+</TouchableOpacity>
           <Text style={styles.distanceText}>{distance}</Text>
           <Ionicons name="location-outline" size={14} color="#6D28D9" />
           <TouchableOpacity
