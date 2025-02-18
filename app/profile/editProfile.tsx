@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, KeyboardTypeOptions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,11 +20,18 @@ type UserProfile = {
   genero?: string;
 };
 
+interface InputFieldProps {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  editable?: boolean;
+  keyboardType?: KeyboardTypeOptions;
+}
 
 const EditProfileScreen = () => {
   const router = useRouter();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<UserProfile>({
     nombre: '',
     apellido: '',
     rut: '',
@@ -53,7 +60,6 @@ const EditProfileScreen = () => {
 
         if (userSnap.exists()) {
           const userData = userSnap.data() as UserProfile;
-
           setForm({
             nombre: userData.nombre || '',
             apellido: userData.apellido || '',
@@ -118,160 +124,183 @@ const EditProfileScreen = () => {
     }
   };
 
+  const InputField: React.FC<InputFieldProps> = ({
+    label,
+    value,
+    onChangeText,
+    editable = true,
+    keyboardType = 'default',
+  }) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={[styles.input, !editable && styles.disabledInput]}
+        value={value}
+        onChangeText={onChangeText}
+        editable={editable}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back-outline" size={24} color="#333" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <View style={styles.backButtonContainer}>
+            <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Editar Perfil</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.row}>
-          <View style={[styles.inputContainer, styles.halfWidth]}>
-            <Text style={styles.label}>Nombre</Text>
-            <TextInput
-              style={styles.input}
-              value={form.nombre}
-              onChangeText={(text) => handleInputChange('nombre', text)}
-            />
-          </View>
-          <View style={[styles.inputContainer, styles.halfWidth]}>
-            <Text style={styles.label}>Apellido</Text>
-            <TextInput
-              style={styles.input}
-              value={form.apellido}
-              onChangeText={(text) => handleInputChange('apellido', text)}
-            />
-          </View>
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>RUT</Text>
-          <TextInput
-            style={[styles.input, styles.disabledInput]}
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+        <View style={styles.formContainer}>
+          <InputField
+            label="Nombre"
+            value={form.nombre}
+            onChangeText={(text) => handleInputChange('nombre', text)}
+          />
+          <InputField
+            label="Apellido"
+            value={form.apellido}
+            onChangeText={(text) => handleInputChange('apellido', text)}
+          />
+          <InputField
+            label="RUT"
             value={form.rut}
             editable={false}
+            onChangeText={() => {}}
           />
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Fecha de Nacimiento</Text>
-          <BirthDatePicker
-            selectedDate={new Date(form.fechaNacimiento)}
-            onSelect={(date) => handleInputChange('fechaNacimiento', date.toISOString())}
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, styles.disabledInput]}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Fecha de Nacimiento</Text>
+            <BirthDatePicker
+              selectedDate={new Date(form.fechaNacimiento)}
+              onSelect={(date) =>
+                handleInputChange('fechaNacimiento', date.toISOString())
+              }
+            />
+          </View>
+          <InputField
+            label="Email"
             value={form.email}
             editable={false}
+            onChangeText={() => {}}
           />
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Teléfono</Text>
-          <TextInput
-            style={styles.input}
+          <InputField
+            label="Teléfono"
             value={form.telefono}
-            keyboardType="phone-pad"
             onChangeText={(text) => handleInputChange('telefono', text)}
+            keyboardType="phone-pad"
           />
-        </View>
-        <View style={styles.row}>
-          <View style={[styles.inputContainer, styles.halfWidth]}>
+          <View style={styles.inputContainer}>
             <Text style={styles.label}>Nacionalidad</Text>
             <NationalityPicker
-              selectedNationality={form.nacionalidad}
+              selectedNationality={form.nacionalidad || ''}
               onSelect={(nationality) => handleInputChange('nacionalidad', nationality)}
             />
           </View>
-          <View style={[styles.inputContainer, styles.halfWidth]}>
+          <View style={styles.inputContainer}>
             <Text style={styles.label}>Género</Text>
             <GenderPicker
-              selectedGender={form.genero}
+              selectedGender={form.genero || ''}
               onSelect={(genero) => handleInputChange('genero', genero)}
             />
           </View>
         </View>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>GUARDAR</Text>
-        </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView >
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F6F6F6',
   },
   header: {
-    flexDirection: 'row',
+    backgroundColor: '#EDE9FE',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    height: 100,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#333',
-    marginLeft: 16,
-  },
-  content: {
-    padding: 16,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  disabledInput: {
-    backgroundColor: '#F3F4F6',
-    color: '#9CA3AF',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  halfWidth: {
-    width: '48%',
-  },
-  saveButton: {
-    backgroundColor: '#4F46E5',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   backButton: {
     position: 'absolute',
     top: 20,
     left: 20,
     zIndex: 10,
+  },
+  backButtonContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 50,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  content: {
+    padding: 20,
+  },
+  formContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  disabledInput: {
+    backgroundColor: '#F3F4F6',
+    color: '#9CA3AF',
+  },
+  saveButton: {
+    backgroundColor: '#4F46E5',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

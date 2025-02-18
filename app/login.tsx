@@ -14,17 +14,19 @@ import { auth, firestore } from '../config/firebase';
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
+  User,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 const LoginScreen = () => {
-  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-  const [passwordVisible, setPasswordVisible] = useState(false); // Estado para controlar la visibilidad de la contraseña
+  const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -36,7 +38,7 @@ const LoginScreen = () => {
     return unsubscribe;
   }, []);
 
-  const checkProfileCompletion = async (userId) => {
+  const checkProfileCompletion = async (userId: string) => {
     try {
       const userDocRef = doc(firestore, 'users', userId);
       const userDoc = await getDoc(userDocRef);
@@ -51,7 +53,7 @@ const LoginScreen = () => {
       } else {
         Alert.alert('Error', 'No se pudo encontrar la información del usuario.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al verificar el estado del perfil:', error);
       Alert.alert('Error', 'Hubo un problema al verificar el estado del perfil. Inténtalo de nuevo.');
     }
@@ -59,17 +61,14 @@ const LoginScreen = () => {
 
   const handleRegister = () => {
     router.replace('/register/home');
-  } 
+  };
 
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setUser(userCredential.user);
-      checkProfileCompletion(userCredential.user.uid);
-    } catch (error) {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
       Alert.alert('Error', error.message || 'Ocurrió un error al iniciar sesión.');
-    } finally {
       setLoading(false);
     }
   };
@@ -85,15 +84,15 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Botón de "Volver" */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back-outline" size={24} color="black" />
       </TouchableOpacity>
 
       <Text style={styles.title}>Iniciar Sesión</Text>
-      <Text style={styles.subtitle}>Bienvenido/a de nuevo! Por favor inicia sesión para continuar</Text>
+      <Text style={styles.subtitle}>
+        ¡Bienvenido/a de nuevo! Por favor inicia sesión para continuar
+      </Text>
 
-      {/* Campo de correo electrónico */}
       <Text style={styles.inputText}>Correo electrónico</Text>
       <View style={styles.inputContainer}>
         <Ionicons name="mail-outline" size={20} color="black" style={styles.icon} />
@@ -107,7 +106,6 @@ const LoginScreen = () => {
         />
       </View>
 
-      {/* Campo de contraseña */}
       <Text style={styles.inputText}>Contraseña</Text>
       <View style={styles.inputContainer}>
         <Ionicons name="lock-closed-outline" size={20} color="black" style={styles.icon} />
@@ -116,14 +114,17 @@ const LoginScreen = () => {
           placeholder="**********"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry={!passwordVisible} // Usar el estado para controlar la visibilidad
+          secureTextEntry={!passwordVisible}
         />
         <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
-          <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="black" />
+          <Ionicons
+            name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color="black"
+          />
         </TouchableOpacity>
       </View>
 
-      {/* Recordarme */}
       <View style={styles.rememberMeContainer}>
         <TouchableOpacity style={styles.checkbox} onPress={() => setRememberMe(!rememberMe)}>
           <Ionicons
@@ -135,17 +136,15 @@ const LoginScreen = () => {
         <Text style={styles.rememberMeText}>Recordarme durante 30 días</Text>
       </View>
 
-      {/* Botón de inicio de sesión */}
       <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
         <Text style={styles.loginButtonText}>Iniciar sesión</Text>
         <Ionicons name="arrow-forward-outline" size={20} color="white" style={styles.iconRight} />
       </TouchableOpacity>
 
-      {/* Enlaces adicionales */}
       <View style={styles.linksContainer}>
         <View style={styles.linkRow}>
-          <Text >¿No tienes una cuenta aún? </Text>
-          <TouchableOpacity onPress={handleRegister}>
+          <Text>¿No tienes una cuenta aún? </Text>
+          <TouchableOpacity onPress={() => router.push('/register/home')}>
             <Text style={styles.linkText}>Regístrate</Text>
           </TouchableOpacity>
         </View>
@@ -157,12 +156,11 @@ const LoginScreen = () => {
         <View style={styles.line} />
       </View>
 
-      {/* Botones de inicio de sesión social */}
       <TouchableOpacity style={styles.socialButton}>
         <Ionicons name="logo-google" size={22} />
         <Text style={styles.socialButtonText}>Iniciar sesión con Google</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.socialButton]}>
+      <TouchableOpacity style={styles.socialButton}>
         <Ionicons name="logo-facebook" size={22} />
         <Text style={styles.socialButtonText}>Iniciar sesión con Facebook</Text>
       </TouchableOpacity>
@@ -303,6 +301,9 @@ const styles = StyleSheet.create({
     color: 'black',
     fontWeight: 'bold',
     fontSize: 16,
+    marginLeft: 10,
+  },
+  iconRight: {
     marginLeft: 10,
   },
 });
