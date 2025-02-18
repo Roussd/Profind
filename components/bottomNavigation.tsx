@@ -2,11 +2,33 @@ import React from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { getDoc, doc } from 'firebase/firestore';
+import { auth, firestore } from '../config/firebase';
 
 
 interface BottomNavigationProps {
   onRatingPress?: () => void;
 }
+
+const router = useRouter();
+
+const handleProfileNavigation = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const userDoc = await getDoc(doc(firestore, "users", user.uid));
+    const userProfileType = userDoc.exists() ? userDoc.data().profileType : null;
+
+    if (userProfileType === "2") {
+      router.push("/profileClient");
+    } else {
+      router.push("/profileProfessional");
+    }
+  } catch (error) {
+    console.error("Error navigating:", error);
+  }
+};
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ onRatingPress }) => {
   const router = useRouter();
@@ -49,7 +71,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ onRatingPress }) =>
 
       <TouchableOpacity
         style={styles.navItem}
-        onPress={() => router.push('/profile')}
+        onPress={handleProfileNavigation}
       >
         <FontAwesome5 name="user" size={24} color="#4F46E5" />
         <Text style={styles.navText}>Perfil</Text>

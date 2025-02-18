@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal, ScrollView } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -86,7 +84,10 @@ const SecurityScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/profile")}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <View style={styles.backButtonContainer}>
             <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
           </View>

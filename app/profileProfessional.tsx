@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { useFocusEffect } from 'expo-router';
 
-const ProfileScreen = () => {
+const ProfileScreenProfessional = () => {
   const router = useRouter();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userData, setUserData] = useState({
     nombre: '',
     apellido: '',
     email: '',
+    profileType: '',
+    available: false,
   });
+  const [isAvailable, setIsAvailable] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -26,22 +29,26 @@ const ProfileScreen = () => {
         Alert.alert('Error', 'No se pudo obtener la información del usuario.');
         return;
       }
-
       try {
         const userDoc = doc(firestore, 'users', userId);
         const userSnap = await getDoc(userDoc);
-
         if (userSnap.exists()) {
+          const data = userSnap.data();
           setUserData({
-            nombre: userSnap.data().nombre || 'Usuario',
-            apellido: userSnap.data().apellido || '',
-            email: auth.currentUser?.email || userSnap.data().email || 'No especificado',
+            nombre: data.nombre || 'Usuario',
+            apellido: data.apellido || '',
+            email: auth.currentUser?.email || data.email || 'No especificado',
+            profileType: data.profileType || '2',
+            available: data.available || false,
           });
+          setIsAvailable(data.available || false);
         } else {
           setUserData({
             nombre: 'Usuario',
             apellido: '',
             email: auth.currentUser?.email || 'No especificado',
+            profileType: '2',
+            available: false,
           });
         }
       } catch (error) {
@@ -53,13 +60,11 @@ const ProfileScreen = () => {
     fetchUserData();
   }, []);
 
-
   const fetchProfileImage = async () => {
     if (!auth.currentUser?.photoURL) {
       setProfileImage(null);
       return;
     }
-
     try {
       const downloadURL = await getDownloadURL(ref(getStorage(), auth.currentUser.photoURL));
       setProfileImage(downloadURL);
@@ -75,13 +80,26 @@ const ProfileScreen = () => {
     }, [])
   );
 
-
   const handleSignOut = async () => {
     try {
       await signOut(auth);
       router.replace('/home');
     } catch (error) {
       Alert.alert('Error', 'Hubo un problema al cerrar sesión. Inténtalo de nuevo.');
+    }
+  };
+
+  const handleToggleAvailable = async (value: boolean) => {
+    setIsAvailable(value);
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    try {
+      const userDoc = doc(firestore, 'users', userId);
+      await updateDoc(userDoc, { available: value });
+      Alert.alert('Éxito', `Ahora estás ${value ? 'disponible' : 'no disponible'} para ofrecer servicios.`);
+    } catch (error) {
+      console.error('Error al actualizar disponibilidad:', error);
+      Alert.alert('Error', 'No se pudo actualizar tu disponibilidad.');
     }
   };
 
@@ -112,7 +130,6 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
@@ -123,8 +140,6 @@ const ProfileScreen = () => {
             <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
           </View>
         </TouchableOpacity>
-
-
         <View style={styles.headerTop}>
         </View>
       </View>
@@ -156,23 +171,48 @@ const ProfileScreen = () => {
           <MenuItem
             icon="person-outline"
             text="Editar perfil"
-            onPress={() => router.push('../profile/editProfile')}
+            onPress={() => router.push('/profile/editProfile')}
           />
           <MenuItem icon="notifications-outline" text="Notificaciones" rightText="ON" />
           <MenuItem icon="language-outline" text="Idioma" rightText="Español" isLast />
         </View>
 
         <View style={styles.menuSection}>
+          <View style={styles.menuItem}>
+            <Ionicons name="construct-outline" size={22} color="#4F46E5" style={styles.menuIcon} />
+            <Text style={styles.menuText}>Disponibilidad</Text>
+            <Switch
+              value={isAvailable}
+              onValueChange={handleToggleAvailable}
+              thumbColor="#4F46E5"
+              trackColor={{ false: '#ccc', true: '#4F46E5' }}
+            />
+          </View>
+          <MenuItem
+            icon="settings-outline"
+            text="Ajustes de servicios"
+            onPress={() => router.push('/profile/workerSettings')}
+          />
+          <MenuItem
+            icon="bar-chart-outline"
+            text="Estadísticas"
+            isLast
+            onPress={() => router.push('/profile/statistics')}
+          />
+        </View>
+
+        <View style={styles.menuSection}>
           <MenuItem
             icon="shield-checkmark-outline"
             text="Seguridad"
-            onPress={() => router.push('../profile/security')}
+            onPress={() => router.push('/profile/security')}
           />
           <MenuItem icon="color-palette-outline" text="Tema" rightText="Modo Claro" />
           <MenuItem
             icon="card-outline"
-            text="Gestionar Métodos de Pago" isLast
-            onPress={() => router.push('../payment/paymentMethod')}
+            text="Gestionar Métodos de Pago"
+            isLast
+            onPress={() => router.push('/payment/paymentMethod')}
           />
         </View>
 
@@ -180,17 +220,17 @@ const ProfileScreen = () => {
           <MenuItem
             icon="help-circle-outline"
             text="Soporte"
-            onPress={() => router.push('../profile/support')}
+            onPress={() => router.push('/profile/support')}
           />
-          <MenuItem 
-            icon="call-outline" 
-            text="Contacto" 
-            onPress={() => router.push('../profile/contact')}
+          <MenuItem
+            icon="call-outline"
+            text="Contacto"
+            onPress={() => router.push('/profile/contact')}
           />
           <MenuItem
             icon="lock-closed-outline"
             text="Políticas de Privacidad"
-            onPress={() => router.push('../profile/privacyPolicy')}
+            onPress={() => router.push('/profile/privacyPolicy')}
             isLast
           />
         </View>
@@ -254,10 +294,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
@@ -272,6 +309,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
   menuSection: {
     backgroundColor: 'white',
     borderRadius: 16,
@@ -279,10 +324,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingVertical: 8,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 3,
@@ -313,14 +355,12 @@ const styles = StyleSheet.create({
     color: '#4F46E5',
     fontWeight: '600',
   },
-
   backButton: {
     position: 'absolute',
     top: 20,
     left: 20,
     zIndex: 10,
   },
-
   backButtonContainer: {
     backgroundColor: '#FFF',
     borderRadius: 50,
@@ -329,15 +369,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
-
   logoutSection: {
     marginHorizontal: 20,
     marginTop: 16,
@@ -356,7 +392,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-
 });
 
-export default ProfileScreen;
+export default ProfileScreenProfessional;

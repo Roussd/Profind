@@ -1,15 +1,12 @@
 import { ExpoRoot } from "expo-router";
 import { RegisterProvider } from "./context/userRegisterContext";
-import { ThemeProvider } from "./context/ThemeContext"; 
 
 export default function App() {
   // @ts-ignore
   const ctx = require.context("./app");
   return (
     <RegisterProvider>
-      <ThemeProvider>
         <ExpoRoot context={ctx} />
-      </ThemeProvider>
     </RegisterProvider>
   );
 }
