@@ -33,7 +33,8 @@
     "react-native-svg": "15.8.0",
     "react-rut-formatter": "^0.2.2",
     "world-countries": "^5.0.0",
-    "expo-notifications": "~0.29.13"
+    "expo-notifications": "~0.29.13",
+    "react-native-webview": "13.12.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

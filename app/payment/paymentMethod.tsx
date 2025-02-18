@@ -1,14 +1,14 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import PaymentMethodList, { PaymentMethod } from "./PaymentMethodList";
-import PaymentMethodForm from "./PaymentMethodForm";
+import { useState } from "react"
+import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, ScrollView } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
+import { useRouter } from "expo-router"
+import PaymentMethodList, { type PaymentMethod } from "./PaymentMethodList"
+import PaymentMethodForm from "./PaymentMethodForm"
 
 const PaymentMethodsScreen = () => {
-  const router = useRouter();
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
+  const router = useRouter()
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [modalVisible, setModalVisible] = useState(false)
 
   const handleAddPaymentMethod = (cardNumber: string, cardBrand: string, cardType: "credit" | "debit") => {
     const newMethod: PaymentMethod = {
@@ -16,82 +16,106 @@ const PaymentMethodsScreen = () => {
       type: cardType,
       last4: cardNumber.slice(-4),
       brand: cardBrand || "Desconocido",
-    };
-    setPaymentMethods((prev) => [...prev, newMethod]);
-    setModalVisible(false);
-  };
+    }
+    setPaymentMethods((prev) => [...prev, newMethod])
+    setModalVisible(false)
+  }
 
   const handleDeletePaymentMethod = (id: string) => {
-    setPaymentMethods(paymentMethods.filter((method) => method.id !== id));
-  };
+    setPaymentMethods(paymentMethods.filter((method) => method.id !== id))
+  }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <View style={styles.backButtonContainer}>
+            <Ionicons name="arrow-back-outline" size={20} color="#4F46E5" />
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.title}>Métodos de Pago</Text>
+      </View>
+
+      <ScrollView style={styles.content}>
+        <PaymentMethodList methods={paymentMethods} onDelete={handleDeletePaymentMethod} />
+
+        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+          <Ionicons name="add-circle-outline" size={24} color="#FFF" />
+          <Text style={styles.addButtonText}>Añadir método de pago</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
       <Modal
         animationType="slide"
+        transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <PaymentMethodForm onSubmit={handleAddPaymentMethod} onCancel={() => setModalVisible(false)} />
       </Modal>
-
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={28} color="#4F46E5" />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>Métodos de Pago</Text>
-
-      <PaymentMethodList methods={paymentMethods} onDelete={handleDeletePaymentMethod} />
-
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Ionicons name="add" size={24} color="#FFF" />
-        <Text style={styles.addButtonText}>Añadir método de pago</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
+    </SafeAreaView>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: "#F6F6F6",
+  },
+  header: {
+    backgroundColor: "#EDE9FE",
     paddingHorizontal: 20,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingBottom: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 100,
   },
   backButton: {
     position: "absolute",
-    top: 50,
+    top: 20,
     left: 20,
-    backgroundColor: "white",
-    borderRadius: 30,
-    padding: 10,
-    zIndex: 1,
+    zIndex: 10,
+  },
+  backButtonContainer: {
+    backgroundColor: "#FFF",
+    borderRadius: 50,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#4F46E5",
-    textAlign: "center",
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#333",
+  },
+  content: {
+    flex: 1,
+    padding: 20,
   },
   addButton: {
     flexDirection: "row",
     backgroundColor: "#4F46E5",
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 16,
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 20,
+    marginTop: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 6,
+    elevation: 4,
   },
   addButtonText: {
     color: "#FFF",
@@ -99,6 +123,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-});
+})
 
-export default PaymentMethodsScreen;
+export default PaymentMethodsScreen
+

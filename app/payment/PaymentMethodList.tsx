@@ -1,61 +1,80 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import type React from "react"
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
 
 export interface PaymentMethod {
-  id: string;
-  type: "credit" | "debit";
-  last4: string;
-  brand: string;
+  id: string
+  type: "credit" | "debit"
+  last4: string
+  brand: string
 }
 
 interface PaymentMethodListProps {
-  methods: PaymentMethod[];
-  onDelete: (id: string) => void;
+  methods: PaymentMethod[]
+  onDelete: (id: string) => void
 }
 
 const PaymentMethodList: React.FC<PaymentMethodListProps> = ({ methods, onDelete }) => {
+  const getCardImage = (brand: string) => {
+    switch (brand.toLowerCase()) {
+      case "visa":
+        return require("../../assets/visa.png")
+      case "mastercard":
+        return require("../../assets/mastercard.png")
+      default:
+        return require("../../assets/generic-card.png")
+    }
+  }
+
   return (
     <View style={styles.listContainer}>
       {methods.length === 0 ? (
-        <Text style={styles.emptyText}>No hay métodos de pago registrados.</Text>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="card-outline" size={48} color="#CCCCCC" />
+          <Text style={styles.emptyText}>No hay métodos de pago registrados.</Text>
+        </View>
       ) : (
         methods.map((method) => (
           <View key={method.id} style={styles.itemContainer}>
             <View style={styles.itemInfo}>
-              <Ionicons
-                name={method.type === "credit" ? "card" : "cash"}
-                size={24}
-                color="#4F46E5"
-              />
-              <Text style={styles.itemText}>
-                {method.brand} terminada en {method.last4}
-              </Text>
+              <Image source={getCardImage(method.brand)} style={styles.cardImage} />
+              <View style={styles.cardDetails}>
+                <Text style={styles.brandText}>{method.brand}</Text>
+                <Text style={styles.last4Text}>•••• {method.last4}</Text>
+              </View>
             </View>
-            <TouchableOpacity onPress={() => onDelete(method.id)}>
-              <Ionicons name="trash-outline" size={24} color="#FF4136" />
+            <TouchableOpacity onPress={() => onDelete(method.id)} style={styles.deleteButton}>
+              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         ))
       )}
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   listContainer: {
     marginVertical: 20,
   },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8F8F8",
+    borderRadius: 12,
+    padding: 32,
+  },
   emptyText: {
     fontSize: 16,
     textAlign: "center",
     color: "#888",
+    marginTop: 16,
   },
   itemContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -68,12 +87,32 @@ const styles = StyleSheet.create({
   itemInfo: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
   },
-  itemText: {
+  cardImage: {
+    width: 40,
+    height: 25,
+    resizeMode: "contain",
+  },
+  cardDetails: {
     marginLeft: 12,
-    fontSize: 16,
-    color: "#4e4e4e",
   },
-});
+  brandText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333333",
+  },
+  last4Text: {
+    fontSize: 14,
+    color: "#666666",
+    marginTop: 2,
+  },
+  deleteButton: {
+    backgroundColor: "#FF4136",
+    borderRadius: 8,
+    padding: 8,
+  },
+})
 
-export default PaymentMethodList;
+export default PaymentMethodList
+
