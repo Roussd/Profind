@@ -19,7 +19,8 @@ const RegisterHomeScreen = () => {
   const [password, setPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-  // Función para manejar el registro
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleRegister = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
@@ -32,18 +33,15 @@ const RegisterHomeScreen = () => {
     }
 
     try {
-      // Crear usuario en Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const userId = userCredential.user.uid;
 
-      // Guardar la variable profileCompleted en Firestore
       const userDocRef = doc(firestore, 'users', userId);
       await setDoc(userDocRef, {
         profileCompleted: false,
       });
       router.push('/register/register');
     } catch (error: any) {
-      // Manejo de errores
       let errorMessage = 'Algo salió mal. Inténtalo de nuevo.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este correo ya está registrado.';
@@ -83,7 +81,6 @@ const RegisterHomeScreen = () => {
         />
       </View>
 
-      {/* Campo de contraseña */}
       <Text style={styles.inputText}>Contraseña</Text>
       <View style={styles.inputContainer}>
         <Ionicons name="lock-closed-outline" size={20} color="black" style={styles.icon} />
@@ -92,9 +89,16 @@ const RegisterHomeScreen = () => {
           placeholder="**********"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!showPassword}
         />
-        <Ionicons name="eye-outline" size={20} color="gray" style={styles.iconRight} />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Ionicons
+            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color="gray"
+            style={styles.iconRight}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Aceptar términos y condiciones */}
@@ -104,7 +108,7 @@ const RegisterHomeScreen = () => {
           onPress={() => setAgreeToTerms(!agreeToTerms)}
         >
           <Ionicons
-            name={agreeToTerms ? "checkbox-outline" : "square-outline"}
+            name={agreeToTerms ? 'checkbox-outline' : 'square-outline'}
             size={20}
             color="gray"
           />
@@ -177,6 +181,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  inputText: {
+    color: '#1E293B',
+    fontWeight: 'bold',
+    fontSize: 15,
+    marginBottom: 8,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -186,21 +196,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 15,
   },
-  input: {
-    flex: 1,
-    paddingVertical: 10,
-  },
   icon: {
     marginRight: 10,
   },
   iconRight: {
     marginLeft: 10,
   },
-  inputText: {
-    color: '#1E293B',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginBottom: 8,
+  input: {
+    flex: 1,
+    paddingVertical: 10,
   },
   termsContainer: {
     flexDirection: 'row',
@@ -253,10 +257,10 @@ const styles = StyleSheet.create({
   circle: {
     width: 10,
     height: 10,
-    borderRadius: 5, // Hace el círculo redondo
+    borderRadius: 5,
     borderColor: 'gray',
     borderWidth: 2,
-    marginHorizontal: 10, // Espaciado entre la línea y el círculo
+    marginHorizontal: 10,
   },
   socialButton: {
     flexDirection: 'row',

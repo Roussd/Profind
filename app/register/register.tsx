@@ -9,15 +9,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
-import { checkRut, prettifyRut } from 'react-rut-formatter'; // Importa las funciones de react-rut-formatter
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; // Importar funciones de Firebase
-import BirthDatePicker from '../../components/birthDatePicker'; // Importar el componente BirthDatePicker
-import GenderPicker from '../../components/genderPicker'; // Importar el componente GenderPicker
+import { useRegisterContext } from '../../context/userRegisterContext'; 
+import { checkRut, prettifyRut } from 'react-rut-formatter'; 
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; 
+import BirthDatePicker from '../../components/birthDatePicker'; 
+import GenderPicker from '../../components/genderPicker'; 
 
 const RegisterScreen = () => {
   const router = useRouter();
-  const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
+  const { setRegisterData } = useRegisterContext(); 
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [rut, setRut] = useState('');
@@ -25,18 +25,21 @@ const RegisterScreen = () => {
   const [telefono, setTelefono] = useState('');
   const [genero, setGenero] = useState('');
 
-  const checkRutInDatabase = async (rut) => {
+  const checkRutInDatabase = async (rut: string): Promise<boolean> => {
     const db = getFirestore();
     const q = query(collection(db, 'users'), where('rut', '==', rut));
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
   };
 
-  const isAdult = (birthDate) => {
+  const isAdult = (birthDate: Date): boolean => {
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDifference = today.getMonth() - birthDate.getMonth();
-    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+    ) {
       return age - 1 >= 18;
     }
     return age >= 18;
@@ -76,7 +79,6 @@ const RegisterScreen = () => {
       return;
     }
 
-    // Almacenar datos en el contexto
     setRegisterData({
       nombre,
       apellido,
@@ -86,7 +88,6 @@ const RegisterScreen = () => {
       genero,
     });
 
-    // Pasar a la pantalla de selección de servicios
     router.push('/register/profiletype');
   };
 

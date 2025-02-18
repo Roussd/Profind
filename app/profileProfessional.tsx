@@ -8,7 +8,7 @@ import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 const ProfileScreenProfessional = () => {
   const router = useRouter();

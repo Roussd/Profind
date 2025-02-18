@@ -11,14 +11,22 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useRegisterContext } from '../../context/userRegisterContext'; 
-import { getFirestore, collection, getDocs } from 'firebase/firestore'; // Importar funciones de Firebase
+import { useRegisterContext } from '../../context/userRegisterContext';
+import { getFirestore, collection, getDocs} from 'firebase/firestore';
+
+
+type ServiceItem = {
+  label: string;
+  value: string;
+};
 
 const ServiceSelectionScreen = () => {
   const router = useRouter();
-  const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
+  const { setRegisterData } = useRegisterContext();
+  
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,14 +35,16 @@ const ServiceSelectionScreen = () => {
         const db = getFirestore();
         const servicesCollection = collection(db, 'services');
         const servicesSnapshot = await getDocs(servicesCollection);
-        const servicesList = servicesSnapshot.docs.map(doc => {
+        
+        const servicesList = servicesSnapshot.docs.map((doc: any) => {
           const data = doc.data();
-          console.log('Service document data:', data); 
+          console.log('Service document data:', data);
           return {
-            label: data.name, 
+            label: data.name,
             value: doc.id,
           };
         });
+        
         console.log('Services fetched from Firebase:', servicesList);
         setServices(servicesList);
       } catch (error) {
@@ -53,13 +63,11 @@ const ServiceSelectionScreen = () => {
       Alert.alert('Error', 'Por favor, selecciona al menos un servicio.');
       return;
     }
-
-    // Almacenar datos en el contexto
     setRegisterData({
       service: selectedServices,
     });
 
-    router.push('/register/serviceprice'); // Avanzar a la siguiente pantalla
+    router.push('/register/serviceprice');
   };
 
   const toggleServiceSelection = (service: string) => {
@@ -72,7 +80,7 @@ const ServiceSelectionScreen = () => {
     });
   };
 
-  const renderService = (service) => (
+  const renderService = (service: ServiceItem) => (
     <TouchableOpacity
       key={service.value}
       style={[
@@ -140,14 +148,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   servicesContainer: {
-    maxHeight: 200, // Limitar la altura para mostrar solo 4 elementos
+    maxHeight: 200,
     marginBottom: 20,
   },
   serviceOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10, // Reducir el tamaño vertical
-    paddingHorizontal: 8, // Reducir el tamaño horizontal
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: '#f9f9f9',
     marginBottom: 10,
@@ -191,7 +199,7 @@ const styles = StyleSheet.create({
   helpText: {
     fontSize: 14,
     marginRight: 5,
-  },  
+  },
   backButton: {
     position: 'absolute',
     top: 50,

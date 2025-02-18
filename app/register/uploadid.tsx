@@ -13,12 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, firestore, storage } from '../../config/firebase';
-import { useRegisterContext } from '../../context/userRegisterContext'; // Importa el hook
+import { useRegisterContext } from '../../context/userRegisterContext';
 
 const UploadID = () => {
   const router = useRouter();
-  const { setRegisterData } = useRegisterContext(); // Usar el hook directamente
-  const [image, setImage] = useState(null);
+  const { setRegisterData } = useRegisterContext();
+  const [image, setImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const pickImageFromLibrary = async () => {
@@ -107,7 +107,6 @@ const UploadID = () => {
         await updateDoc(userDocRef, { imageUrl });
       }
   
-      // Almacenar datos en el contexto
       setRegisterData({
         imageUrl,
       });

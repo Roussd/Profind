@@ -5,33 +5,30 @@ import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { getDoc, doc } from 'firebase/firestore';
 import { auth, firestore } from '../config/firebase';
 
-
 interface BottomNavigationProps {
   onRatingPress?: () => void;
 }
 
-const router = useRouter();
-
-const handleProfileNavigation = async () => {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  try {
-    const userDoc = await getDoc(doc(firestore, "users", user.uid));
-    const userProfileType = userDoc.exists() ? userDoc.data().profileType : null;
-
-    if (userProfileType === "2") {
-      router.push("/profileClient");
-    } else {
-      router.push("/profileProfessional");
-    }
-  } catch (error) {
-    console.error("Error navigating:", error);
-  }
-};
-
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ onRatingPress }) => {
   const router = useRouter();
+
+  const handleProfileNavigation = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+      const userProfileType = userDoc.exists() ? userDoc.data()?.profileType : null;
+
+      if (userProfileType === '2') {
+        router.push('/profileClient');
+      } else {
+        router.push('/profileProfessional');
+      }
+    } catch (error) {
+      console.error('Error navigating:', error);
+    }
+  };
 
   const handleRatingPress = () => {
     if (onRatingPress) {
