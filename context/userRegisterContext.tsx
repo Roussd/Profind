@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 
-// Define la interfaz para el contexto
-interface RegisterContextType {
+interface RegisterData {
   email: string;
   password: string;
   nombre: string;
@@ -10,43 +9,51 @@ interface RegisterContextType {
   fechaNacimiento: Date;
   genero: string;
   telefono: string;
-  profileType: string; 
-  imageUrl: string; 
-  service: string[]; // Cambiar a array de strings
-  servicePrice: string; 
-  setRegisterData: (data: Partial<RegisterContextType>) => void;
+  profileType: string;
+  imageUrl: string;
+  service: string[];
+  servicePrice: string;
 }
 
-// Crea el contexto
+interface RegisterContextType extends RegisterData {
+  setRegisterData: (data: Partial<RegisterData>) => void;
+}
+
 const RegisterContext = createContext<RegisterContextType | undefined>(undefined);
 
-// Proveedor del contexto
 export const RegisterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [registerData, setRegisterData] = useState({
+
+  const [registerData, setRegisterDataState] = useState<RegisterData>({
+    email: "",
+    password: "",
     nombre: "",
     apellido: "",
     rut: "",
-    fechaNacimiento: new Date(), 
-    telefono: "",
-    profileType: "", 
-    imageUrl: "", 
-    service: [], // Inicializar como array vacío
-    servicePrice: "", 
+    fechaNacimiento: new Date(),
     genero: "",
+    telefono: "",
+    profileType: "",
+    imageUrl: "",
+    service: [], 
+    servicePrice: "",
   });
 
-  const updateRegisterData = (data: Partial<RegisterContextType>) => {
-    setRegisterData((prev) => ({ ...prev, ...data }));
+  const updateRegisterData = (data: Partial<RegisterData>) => {
+    setRegisterDataState((prev) => ({ ...prev, ...data }));
   };
 
   return (
-    <RegisterContext.Provider value={{ ...registerData, setRegisterData: updateRegisterData }}>
+    <RegisterContext.Provider
+      value={{
+        ...registerData,          
+        setRegisterData: updateRegisterData, 
+      }}
+    >
       {children}
     </RegisterContext.Provider>
   );
 };
 
-// Hook para usar el contexto fácilmente
 export const useRegisterContext = () => {
   const context = useContext(RegisterContext);
   if (!context) {
