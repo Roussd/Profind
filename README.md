@@ -22,11 +22,11 @@ ProFind es una aplicación móvil diseñada para conectar a usuarios con profesi
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/Roussd/App-Movil
+   git clone https://github.com/Roussd/Profind
    ```
 2. Navega al directorio del proyecto:
    ```bash
-   cd App-Movil
+   cd Profind
    ```
 3. Instala las dependencias:
    ```bash
